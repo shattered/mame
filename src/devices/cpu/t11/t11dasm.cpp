@@ -24,7 +24,7 @@ static unsigned MakeEA (char *ea, int lo, unsigned pc, int width)
 {
 	int reg, pm;
 
-	assert (width == 2 || width == 4);
+	assert (width == 3 || width == 6);
 
 	reg = lo & 7;
 
@@ -40,7 +40,7 @@ static unsigned MakeEA (char *ea, int lo, unsigned pc, int width)
 			if (reg == 7)
 			{
 				PARAM_WORD (pm);
-				sprintf (ea, "#$%0*X", width, pm & ((width == 2) ? 0xff : 0xffff));
+				sprintf (ea, "#$%o", pm);
 			}
 			else
 			{
@@ -51,7 +51,7 @@ static unsigned MakeEA (char *ea, int lo, unsigned pc, int width)
 			if (reg == 7)
 			{
 				PARAM_WORD (pm);
-				sprintf (ea,  "$%04X", pm &= 0xffff);
+				sprintf (ea,  "$%06o", pm &= 0xffff);
 			}
 			else
 			{
@@ -66,17 +66,31 @@ static unsigned MakeEA (char *ea, int lo, unsigned pc, int width)
 			break;
 		case 6:
 			PARAM_WORD (pm);
-			sprintf(ea, "%s$%X(%s)",
-				(pm&0x8000)?"-":"",
-				(pm&0x8000)?-(signed short)pm:pm,
-				regs[reg]);
+			if (reg == 7)
+			{
+				sprintf (ea,  "$%o", (pc + pm) & 0xffff);
+			}
+			else
+			{
+				sprintf (ea, "%s$%o(%s)",
+					(pm&0x8000)?"-":"",
+					(pm&0x8000)?-(signed short)pm:pm,
+					regs[reg]);
+			}
 			break;
 		case 7:
 			PARAM_WORD (pm);
-			sprintf(ea, "@%s$%X(%s)",
-				(pm&0x8000)?"-":"",
-				(pm&0x8000)?-(signed short)pm:pm,
-				regs[reg]);
+			if (reg == 7)
+			{
+				sprintf (ea,  "@$%o", (pc + pm) & 0xffff);
+			}
+			else
+			{
+				sprintf (ea, "@%s$%o(%s)",
+					(pm&0x8000)?"-":"",
+					(pm&0x8000)?-(signed short)pm:pm,
+					regs[reg]);
+			}
 			break;
 	}
 
@@ -111,11 +125,11 @@ CPU_DISASSEMBLE( t11 )
 				case 0x04:  sprintf (buffer, "IOT"); break;
 				case 0x05:  sprintf (buffer, "RESET"); break;
 				case 0x06:  sprintf (buffer, "RTT"); break;
-				default:    sprintf (buffer, "???? (%04X)", op); break;
+				default:    sprintf (buffer, "???? (%06o)", op); break;
 			}
 			break;
 		case 0x0040:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "JMP   %s", ea1);
 			break;
 		case 0x0080:
@@ -138,7 +152,7 @@ CPU_DISASSEMBLE( t11 )
 						case 0x02:  sprintf (buffer, "CEV"); break;
 						case 0x04:  sprintf (buffer, "CEZ"); break;
 						case 0x08:  sprintf (buffer, "CEN"); break;
-						default:    sprintf (buffer, "Ccc   #$%X", lo & 15); break;
+						default:    sprintf (buffer, "Ccc   #$%o", lo & 15); break;
 					}
 					break;
 				case 060:
@@ -151,46 +165,46 @@ CPU_DISASSEMBLE( t11 )
 						case 0x02:  sprintf (buffer, "SEV"); break;
 						case 0x04:  sprintf (buffer, "SEZ"); break;
 						case 0x08:  sprintf (buffer, "SEN"); break;
-						default:    sprintf (buffer, "Scc   #$%X", lo & 15); break;
+						default:    sprintf (buffer, "Scc   #$%o", lo & 15); break;
 					}
 					break;
 			}
 			break;
 		case 0x00c0:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "SWAB  %s", ea1);
 			break;
 		case 0x0100: case 0x0140: case 0x0180: case 0x01c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BR    $%04X", pc + offset);
+			sprintf (buffer, "BR    $%06o", pc + offset);
 			break;
 		case 0x0200: case 0x0240: case 0x0280: case 0x02c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BNE   $%04X", pc + offset);
+			sprintf (buffer, "BNE   $%06o", pc + offset);
 			break;
 		case 0x0300: case 0x0340: case 0x0380: case 0x03c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BEQ   $%04X", pc + offset);
+			sprintf (buffer, "BEQ   $%06o", pc + offset);
 			break;
 		case 0x0400: case 0x0440: case 0x0480: case 0x04c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BGE   $%04X", pc + offset);
+			sprintf (buffer, "BGE   $%06o", pc + offset);
 			break;
 		case 0x0500: case 0x0540: case 0x0580: case 0x05c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BLT   $%04X", pc + offset);
+			sprintf (buffer, "BLT   $%06o", pc + offset);
 			break;
 		case 0x0600: case 0x0640: case 0x0680: case 0x06c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BGT   $%04X", pc + offset);
+			sprintf (buffer, "BGT   $%06o", pc + offset);
 			break;
 		case 0x0700: case 0x0740: case 0x0780: case 0x07c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BLE   $%04X", pc + offset);
+			sprintf (buffer, "BLE   $%06o", pc + offset);
 			break;
 		case 0x0800: case 0x0840: case 0x0880: case 0x08c0:
 		case 0x0900: case 0x0940: case 0x0980: case 0x09c0:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			if ( (hi & 7) == 7 )
 				sprintf (buffer, "JSR   %s", ea1);
 			else
@@ -198,58 +212,58 @@ CPU_DISASSEMBLE( t11 )
 			flags = DASMFLAG_STEP_OVER;
 			break;
 		case 0x0a00:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "CLR   %s", ea1);
 			break;
 		case 0x0a40:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "COM   %s", ea1);
 			break;
 		case 0x0a80:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "INC   %s", ea1);
 			break;
 		case 0x0ac0:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "DEC   %s", ea1);
 			break;
 		case 0x0b00:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "NEG   %s", ea1);
 			break;
 		case 0x0b40:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "ADC   %s", ea1);
 			break;
 		case 0x0b80:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "SBC   %s", ea1);
 			break;
 		case 0x0bc0:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "TST   %s", ea1);
 			break;
 		case 0x0c00:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "ROR   %s", ea1);
 			break;
 		case 0x0c40:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "ROL   %s", ea1);
 			break;
 		case 0x0c80:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "ASR   %s", ea1);
 			break;
 		case 0x0cc0:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "ASL   %s", ea1);
 			break;
 /*      case 0x0d00:
-            sprintf (buffer, "MARK  #$%X", lo);
+            sprintf (buffer, "MARK  #$%o", lo);
             break;*/
 		case 0x0dc0:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "SXT   %s", ea1);
 			break;
 		case 0x1000: case 0x1040: case 0x1080: case 0x10c0: case 0x1100: case 0x1140: case 0x1180: case 0x11c0:
@@ -260,8 +274,8 @@ CPU_DISASSEMBLE( t11 )
 		case 0x1a00: case 0x1a40: case 0x1a80: case 0x1ac0: case 0x1b00: case 0x1b40: case 0x1b80: case 0x1bc0:
 		case 0x1c00: case 0x1c40: case 0x1c80: case 0x1cc0: case 0x1d00: case 0x1d40: case 0x1d80: case 0x1dc0:
 		case 0x1e00: case 0x1e40: case 0x1e80: case 0x1ec0: case 0x1f00: case 0x1f40: case 0x1f80: case 0x1fc0:
-			pc = MakeEA (ea1, hi, pc, 4);
-			pc = MakeEA (ea2, lo, pc, 4);
+			pc = MakeEA (ea1, hi, pc, 6);
+			pc = MakeEA (ea2, lo, pc, 6);
 			if (lo == 046)      /* MOV src,-(SP) */
 				sprintf (buffer, "PUSH  %s", ea1);
 			else
@@ -278,8 +292,8 @@ CPU_DISASSEMBLE( t11 )
 		case 0x2a00: case 0x2a40: case 0x2a80: case 0x2ac0: case 0x2b00: case 0x2b40: case 0x2b80: case 0x2bc0:
 		case 0x2c00: case 0x2c40: case 0x2c80: case 0x2cc0: case 0x2d00: case 0x2d40: case 0x2d80: case 0x2dc0:
 		case 0x2e00: case 0x2e40: case 0x2e80: case 0x2ec0: case 0x2f00: case 0x2f40: case 0x2f80: case 0x2fc0:
-			pc = MakeEA (ea1, hi, pc, 4);
-			pc = MakeEA (ea2, lo, pc, 4);
+			pc = MakeEA (ea1, hi, pc, 6);
+			pc = MakeEA (ea2, lo, pc, 6);
 			sprintf (buffer, "CMP   %s,%s", ea1, ea2);
 			break;
 		case 0x3000: case 0x3040: case 0x3080: case 0x30c0: case 0x3100: case 0x3140: case 0x3180: case 0x31c0:
@@ -290,8 +304,8 @@ CPU_DISASSEMBLE( t11 )
 		case 0x3a00: case 0x3a40: case 0x3a80: case 0x3ac0: case 0x3b00: case 0x3b40: case 0x3b80: case 0x3bc0:
 		case 0x3c00: case 0x3c40: case 0x3c80: case 0x3cc0: case 0x3d00: case 0x3d40: case 0x3d80: case 0x3dc0:
 		case 0x3e00: case 0x3e40: case 0x3e80: case 0x3ec0: case 0x3f00: case 0x3f40: case 0x3f80: case 0x3fc0:
-			pc = MakeEA (ea1, hi, pc, 4);
-			pc = MakeEA (ea2, lo, pc, 4);
+			pc = MakeEA (ea1, hi, pc, 6);
+			pc = MakeEA (ea2, lo, pc, 6);
 			sprintf (buffer, "BIT   %s,%s", ea1, ea2);
 			break;
 		case 0x4000: case 0x4040: case 0x4080: case 0x40c0: case 0x4100: case 0x4140: case 0x4180: case 0x41c0:
@@ -302,8 +316,8 @@ CPU_DISASSEMBLE( t11 )
 		case 0x4a00: case 0x4a40: case 0x4a80: case 0x4ac0: case 0x4b00: case 0x4b40: case 0x4b80: case 0x4bc0:
 		case 0x4c00: case 0x4c40: case 0x4c80: case 0x4cc0: case 0x4d00: case 0x4d40: case 0x4d80: case 0x4dc0:
 		case 0x4e00: case 0x4e40: case 0x4e80: case 0x4ec0: case 0x4f00: case 0x4f40: case 0x4f80: case 0x4fc0:
-			pc = MakeEA (ea1, hi, pc, 4);
-			pc = MakeEA (ea2, lo, pc, 4);
+			pc = MakeEA (ea1, hi, pc, 6);
+			pc = MakeEA (ea2, lo, pc, 6);
 			sprintf (buffer, "BIC   %s,%s", ea1, ea2);
 			break;
 		case 0x5000: case 0x5040: case 0x5080: case 0x50c0: case 0x5100: case 0x5140: case 0x5180: case 0x51c0:
@@ -314,8 +328,8 @@ CPU_DISASSEMBLE( t11 )
 		case 0x5a00: case 0x5a40: case 0x5a80: case 0x5ac0: case 0x5b00: case 0x5b40: case 0x5b80: case 0x5bc0:
 		case 0x5c00: case 0x5c40: case 0x5c80: case 0x5cc0: case 0x5d00: case 0x5d40: case 0x5d80: case 0x5dc0:
 		case 0x5e00: case 0x5e40: case 0x5e80: case 0x5ec0: case 0x5f00: case 0x5f40: case 0x5f80: case 0x5fc0:
-			pc = MakeEA (ea1, hi, pc, 4);
-			pc = MakeEA (ea2, lo, pc, 4);
+			pc = MakeEA (ea1, hi, pc, 6);
+			pc = MakeEA (ea2, lo, pc, 6);
 			sprintf (buffer, "BIS   %s,%s", ea1, ea2);
 			break;
 		case 0x6000: case 0x6040: case 0x6080: case 0x60c0: case 0x6100: case 0x6140: case 0x6180: case 0x61c0:
@@ -326,58 +340,58 @@ CPU_DISASSEMBLE( t11 )
 		case 0x6a00: case 0x6a40: case 0x6a80: case 0x6ac0: case 0x6b00: case 0x6b40: case 0x6b80: case 0x6bc0:
 		case 0x6c00: case 0x6c40: case 0x6c80: case 0x6cc0: case 0x6d00: case 0x6d40: case 0x6d80: case 0x6dc0:
 		case 0x6e00: case 0x6e40: case 0x6e80: case 0x6ec0: case 0x6f00: case 0x6f40: case 0x6f80: case 0x6fc0:
-			pc = MakeEA (ea1, hi, pc, 4);
-			pc = MakeEA (ea2, lo, pc, 4);
+			pc = MakeEA (ea1, hi, pc, 6);
+			pc = MakeEA (ea2, lo, pc, 6);
 			sprintf (buffer, "ADD   %s,%s", ea1, ea2);
 			break;
 
 		case 0x7800: case 0x7840: case 0x7880: case 0x78c0: case 0x7900: case 0x7940: case 0x7980: case 0x79c0:
-			pc = MakeEA (ea1, lo, pc, 4);
+			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "XOR   %s,%s", regs[hi & 7], ea1);
 			break;
 
 		case 0x7e00: case 0x7e40: case 0x7e80: case 0x7ec0: case 0x7f00: case 0x7f40: case 0x7f80: case 0x7fc0:
 			addr = (pc + 2 - 2 * lo) & 0xffff;
-			sprintf (buffer, "SOB   %s,$%X", regs[hi & 7], addr);
+			sprintf (buffer, "SOB   %s,$%o", regs[hi & 7], addr);
 			break;
 
 		case 0x8000: case 0x8040: case 0x8080: case 0x80c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BPL   $%04X", pc + offset);
+			sprintf (buffer, "BPL   $%06o", pc + offset);
 			break;
 		case 0x8100: case 0x8140: case 0x8180: case 0x81c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BMI   $%04X", pc + offset);
+			sprintf (buffer, "BMI   $%06o", pc + offset);
 			break;
 		case 0x8200: case 0x8240: case 0x8280: case 0x82c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BHI   $%04X", pc + offset);
+			sprintf (buffer, "BHI   $%06o", pc + offset);
 			break;
 		case 0x8300: case 0x8340: case 0x8380: case 0x83c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BLOS  $%04X", pc + offset);
+			sprintf (buffer, "BLOS  $%06o", pc + offset);
 			break;
 		case 0x8400: case 0x8440: case 0x8480: case 0x84c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BVC   $%04X", pc + offset);
+			sprintf (buffer, "BVC   $%06o", pc + offset);
 			break;
 		case 0x8500: case 0x8540: case 0x8580: case 0x85c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BVS   $%04X", pc + offset);
+			sprintf (buffer, "BVS   $%06o", pc + offset);
 			break;
 		case 0x8600: case 0x8640: case 0x8680: case 0x86c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BCC   $%04X", pc + offset);
+			sprintf (buffer, "BCC   $%06o", pc + offset);
 			break;
 		case 0x8700: case 0x8740: case 0x8780: case 0x87c0:
 			offset = 2 * (INT8)(op & 0xff);
-			sprintf (buffer, "BCS   $%04X", pc + offset);
+			sprintf (buffer, "BCS   $%06o", pc + offset);
 			break;
 		case 0x8800: case 0x8840: case 0x8880: case 0x88c0:
-			sprintf (buffer, "EMT   #$%02X", op & 0xff);
+			sprintf (buffer, "EMT   #$%03o", op & 0xff);
 			break;
 		case 0x8900: case 0x8940: case 0x8980: case 0x89c0:
-			sprintf (buffer, "TRAP  #$%02X", op & 0xff);
+			sprintf (buffer, "TRAP  #$%03o", op & 0xff);
 			break;
 
 		case 0x8a00:
@@ -504,8 +518,8 @@ CPU_DISASSEMBLE( t11 )
 		case 0xea00: case 0xea40: case 0xea80: case 0xeac0: case 0xeb00: case 0xeb40: case 0xeb80: case 0xebc0:
 		case 0xec00: case 0xec40: case 0xec80: case 0xecc0: case 0xed00: case 0xed40: case 0xed80: case 0xedc0:
 		case 0xee00: case 0xee40: case 0xee80: case 0xeec0: case 0xef00: case 0xef40: case 0xef80: case 0xefc0:
-			pc = MakeEA (ea1, hi, pc, 4);
-			pc = MakeEA (ea2, lo, pc, 4);
+			pc = MakeEA (ea1, hi, pc, 6);
+			pc = MakeEA (ea2, lo, pc, 6);
 			sprintf (buffer, "SUB   %s,%s", ea1, ea2);
 			break;
 
