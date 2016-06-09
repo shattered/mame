@@ -84,6 +84,7 @@ READ64_MEMBER(address_map_bank_device::read64)
 void address_map_bank_device::device_config_complete()
 {
 	m_program_config = address_space_config( "program", m_endianness, m_databus_width, m_addrbus_width );
+	m_program_config.m_is_octal = TRUE; // XXX
 }
 
 void address_map_bank_device::device_start()

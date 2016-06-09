@@ -3399,7 +3399,7 @@ void device_debug::tracer::update(offs_t pc)
 	// print the address
 	std::string buffer;
 	int logaddrchars = m_debug.logaddrchars();
-	buffer = string_format("%0*X: ", logaddrchars, pc);
+	buffer = string_format("%06o: ", pc);
 
 	// print the disassembly
 	std::string dasm;

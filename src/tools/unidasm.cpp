@@ -609,6 +609,9 @@ int main(int argc, char *argv[])
 			if (!opts.flipped)
 			{
 				// output the address
+				if (opts.mode == 8)
+				printf("%06o: ", curpc);
+				else
 				printf("%08X: ", curpc);
 
 				// output the raw bytes
