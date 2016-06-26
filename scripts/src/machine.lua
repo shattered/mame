@@ -2990,3 +2990,16 @@ if (MACHINES["INPUT_MERGER"]~=null) then
 		MAME_DIR .. "src/devices/machine/input_merger.h",
 	}
 end
+
+---------------------------------------------------
+--
+--@src/devices/machine/ie15.h,MACHINES["IE15"] = true
+---------------------------------------------------
+if (MACHINES["IE15"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/ie15.cpp",
+		MAME_DIR .. "src/devices/machine/ie15.h",
+		MAME_DIR .. "src/mame/machine/ie15_kbd.cpp",
+		MAME_DIR .. "src/mame/machine/ie15_kbd.h",
+	}
+end

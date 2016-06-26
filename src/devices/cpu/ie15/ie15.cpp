@@ -19,17 +19,17 @@
 //**************************************************************************
 
 // device type definition
-const device_type IE15 = &device_creator<ie15_device>;
+const device_type IE15_CPU = &device_creator<ie15_cpu_device>;
 
 //**************************************************************************
 //  DEVICE INTERFACE
 //**************************************************************************
 
 //-------------------------------------------------
-//  ie15_device - constructor
+//  ie15_cpu_device - constructor
 //-------------------------------------------------
-ie15_device::ie15_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
-	: cpu_device(mconfig, IE15, "ie15", tag, owner, clock, "ie15_cpu", __FILE__),
+ie15_cpu_device::ie15_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+	: cpu_device(mconfig, IE15_CPU, "ie15 CPU", tag, owner, clock, "ie15_cpu", __FILE__),
 		m_program_config("program", ENDIANNESS_LITTLE, 8, 14),
 		m_io_config("io", ENDIANNESS_LITTLE, 8, 8), m_A(0), m_CF(0), m_ZF(0), m_RF(0), m_flags(0),
 		m_program(nullptr), m_io(nullptr),
@@ -43,7 +43,7 @@ ie15_device::ie15_device(const machine_config &mconfig, const char *tag, device_
 //  device_start - start up the device
 //-------------------------------------------------
 
-void ie15_device::device_start()
+void ie15_cpu_device::device_start()
 {
 	// find address spaces
 	m_program = &space(AS_PROGRAM);
@@ -73,7 +73,7 @@ void ie15_device::device_start()
 //  device_reset - reset the device
 //-------------------------------------------------
 
-void ie15_device::device_reset()
+void ie15_cpu_device::device_reset()
 {
 	m_CF = m_ZF = m_RF = 0;
 	m_A = 0;
@@ -87,7 +87,7 @@ void ie15_device::device_reset()
 //  the space doesn't exist
 //-------------------------------------------------
 
-const address_space_config *ie15_device::memory_space_config(address_spacenum spacenum) const
+const address_space_config *ie15_cpu_device::memory_space_config(address_spacenum spacenum) const
 {
 	return  (spacenum == AS_PROGRAM) ? &m_program_config :
 			(spacenum == AS_IO) ? &m_io_config :
@@ -99,7 +99,7 @@ const address_space_config *ie15_device::memory_space_config(address_spacenum sp
 //  after it has been set
 //-------------------------------------------------
 
-void ie15_device::state_import(const device_state_entry &entry)
+void ie15_cpu_device::state_import(const device_state_entry &entry)
 {
 	switch (entry.index())
 	{
@@ -116,7 +116,7 @@ void ie15_device::state_import(const device_state_entry &entry)
 //  to a known location where it can be read
 //-------------------------------------------------
 
-void ie15_device::state_export(const device_state_entry &entry)
+void ie15_cpu_device::state_export(const device_state_entry &entry)
 {
 	switch (entry.index())
 	{
@@ -133,7 +133,7 @@ void ie15_device::state_export(const device_state_entry &entry)
 //  for the debugger
 //-------------------------------------------------
 
-void ie15_device::state_string_export(const device_state_entry &entry, std::string &str) const
+void ie15_cpu_device::state_string_export(const device_state_entry &entry, std::string &str) const
 {
 	switch (entry.index())
 	{
@@ -151,7 +151,7 @@ void ie15_device::state_string_export(const device_state_entry &entry, std::stri
 //  of the shortest instruction, in bytes
 //-------------------------------------------------
 
-UINT32 ie15_device::disasm_min_opcode_bytes() const
+UINT32 ie15_cpu_device::disasm_min_opcode_bytes() const
 {
 	return 1;
 }
@@ -161,7 +161,7 @@ UINT32 ie15_device::disasm_min_opcode_bytes() const
 //  of the longest instruction, in bytes
 //-------------------------------------------------
 
-UINT32 ie15_device::disasm_max_opcode_bytes() const
+UINT32 ie15_cpu_device::disasm_max_opcode_bytes() const
 {
 	return 2;
 }
@@ -171,7 +171,7 @@ UINT32 ie15_device::disasm_max_opcode_bytes() const
 //  helper function
 //-------------------------------------------------
 
-offs_t ie15_device::disasm_disassemble(char *buffer, offs_t pc, const UINT8 *oprom, const UINT8 *opram, UINT32 options)
+offs_t ie15_cpu_device::disasm_disassemble(char *buffer, offs_t pc, const UINT8 *oprom, const UINT8 *opram, UINT32 options)
 {
 	extern CPU_DISASSEMBLE( ie15 );
 	return CPU_DISASSEMBLE_NAME(ie15)(nullptr, buffer, pc, oprom, opram, 0);
@@ -186,7 +186,7 @@ offs_t ie15_device::disasm_disassemble(char *buffer, offs_t pc, const UINT8 *opr
 //  cycles it takes for one instruction to execute
 //-------------------------------------------------
 
-UINT32 ie15_device::execute_min_cycles() const
+UINT32 ie15_cpu_device::execute_min_cycles() const
 {
 	return 1;
 }
@@ -196,7 +196,7 @@ UINT32 ie15_device::execute_min_cycles() const
 //  cycles it takes for one instruction to execute
 //-------------------------------------------------
 
-UINT32 ie15_device::execute_max_cycles() const
+UINT32 ie15_cpu_device::execute_max_cycles() const
 {
 	return 1;
 }
@@ -205,7 +205,7 @@ UINT32 ie15_device::execute_max_cycles() const
 //  execute_run - execute until our icount expires
 //-------------------------------------------------
 
-void ie15_device::execute_run()
+void ie15_cpu_device::execute_run()
 {
 	do
 	{
@@ -214,7 +214,7 @@ void ie15_device::execute_run()
 	} while (m_icount > 0);
 }
 
-inline void ie15_device::illegal(UINT8 opcode)
+inline void ie15_cpu_device::illegal(UINT8 opcode)
 {
 	if ((machine().debug_flags & DEBUG_FLAG_ENABLED) != 0)
 	{
@@ -225,7 +225,7 @@ inline void ie15_device::illegal(UINT8 opcode)
 // XXX verify that m_ZF and m_CF are set and handled right
 // XXX 'ota' apparently writes the ALU buffer register, not accumulator
 // XXX what if ldc was at 0x_ff?
-inline void ie15_device::execute_one(int opcode)
+inline void ie15_cpu_device::execute_one(int opcode)
 {
 	UINT16 tmp;
 
@@ -412,42 +412,42 @@ inline void ie15_device::execute_one(int opcode)
     INLINE FUNCTIONS
 ***************************************************************************/
 
-inline UINT8 ie15_device::rop()
+inline UINT8 ie15_cpu_device::rop()
 {
 	UINT8 retVal = m_direct->read_byte(m_PC.w.l);
 	m_PC.w.l = (m_PC.w.l + 1) & 0x0fff;
 	return retVal;
 }
 
-inline UINT8 ie15_device::arg()
+inline UINT8 ie15_cpu_device::arg()
 {
 	UINT8 retVal = m_direct->read_byte(m_PC.w.l);
 	return retVal;
 }
 
-inline UINT8 ie15_device::get_reg_lo(UINT8 reg)
+inline UINT8 ie15_cpu_device::get_reg_lo(UINT8 reg)
 {
 	UINT16 tmp = m_RF ? m_REGS[16 + reg] : m_REGS[reg];
 	return tmp & 255;
 }
 
-inline UINT16 ie15_device::get_reg(UINT8 reg)
+inline UINT16 ie15_cpu_device::get_reg(UINT8 reg)
 {
 	return m_RF ? m_REGS[16 + reg] : m_REGS[reg];
 }
 
-inline void ie15_device::set_reg(UINT8 reg, UINT16 val)
+inline void ie15_cpu_device::set_reg(UINT8 reg, UINT16 val)
 {
 	(m_RF ? m_REGS[16 + reg] : m_REGS[reg]) = val;
 
 }
 
-inline void ie15_device::update_flags(UINT8 val)
+inline void ie15_cpu_device::update_flags(UINT8 val)
 {
 	m_ZF = (val == 0xff) ? 1 : 0;
 }
 
-inline UINT8 ie15_device::do_condition(UINT8 val)
+inline UINT8 ie15_cpu_device::do_condition(UINT8 val)
 {
 	UINT8 v = (val >> 5) & 1;
 	UINT8 cond = 0;
@@ -462,7 +462,7 @@ inline UINT8 ie15_device::do_condition(UINT8 val)
 	return cond;
 }
 
-inline UINT16 ie15_device::get_addr(UINT8 val)
+inline UINT16 ie15_cpu_device::get_addr(UINT8 val)
 {
 	UINT8 lo = arg();
 	return ((val & 0x0f) << 8) + lo + 1;
