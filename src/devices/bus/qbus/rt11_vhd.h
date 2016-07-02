@@ -11,6 +11,12 @@
 #ifndef RT11VHD_H
 #define RT11VHD_H
 
+#include "emu.h"
+
+#include "qbus.h"
+
+#include "includes/pdp11.h"
+
 
 /***************************************************************************
     TYPE DEFINITIONS
@@ -19,7 +25,8 @@
 // ======================> rt11_vhd_image_device
 
 class rt11_vhd_image_device :   public device_t,
-								public device_image_interface
+								public device_image_interface,
+								public device_qbus_card_interface
 {
 public:
 	// construction/destruction
@@ -38,7 +45,6 @@ public:
 	virtual bool is_reset_on_load() const override { return 0; }
 	virtual const char *image_interface() const override { return nullptr; }
 	virtual const char *file_extensions() const override { return "vhd"; }
-	virtual const option_guide *create_option_guide() const override { return nullptr; }
 
 	// specific implementation
 	DECLARE_READ16_MEMBER(read) { return read(offset); }
@@ -65,14 +71,9 @@ private:
 	UINT16                  m_status;
 };
 
+
 // device type definition
 extern const device_type RT11_VHD;
 
-/***************************************************************************
-    DEVICE CONFIGURATION MACROS
-***************************************************************************/
-
-#define MCFG_RT11_VHD_ADD(_tag) \
-	MCFG_DEVICE_ADD(_tag, RT11_VHD, 0)
 
 #endif /* RT11VHD_H */

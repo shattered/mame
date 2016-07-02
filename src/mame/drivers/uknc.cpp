@@ -47,13 +47,14 @@
 #include "emu.h"
 
 #include "bus/centronics/ctronics.h"
+#include "bus/qbus/qbus.h"
+#include "bus/qbus/mpi_cards.h"
 #include "bus/rs232/rs232.h"
 #include "cpu/t11/t11.h"
 #include "imagedev/cassette.h"
 #include "machine/bankdev.h"
 #include "machine/dl11.h"
 #include "machine/i8255.h"
-#include "machine/rt11_vhd.h"
 #include "machine/uknc_ide.h"
 #include "machine/vp1_120.h"
 #include "machine/xm1_031.h"
@@ -108,7 +109,6 @@ public:
 		, m_rs232(*this, "rs232")
 		, m_dl11lan(*this, "dl11lan")
 		, m_lan(*this, "lan")
-		, m_vhd(*this, "vhd")
 		, m_cassette(*this, "cassette")
 		, m_centronics(*this, "centronics")
 		, m_palette(*this, "palette")
@@ -196,7 +196,6 @@ protected:
 	optional_device<rs232_port_device> m_rs232;
 	optional_device<dl11_device> m_dl11lan;
 	optional_device<rs232_port_device> m_lan;
-	required_device<rt11_vhd_image_device> m_vhd;
 	required_device<cassette_image_device> m_cassette;
 	required_device<centronics_device> m_centronics;
 	required_device<palette_device> m_palette;
@@ -215,8 +214,6 @@ static ADDRESS_MAP_START(uknc_mem_banked, AS_PROGRAM, 16, uknc_state)
 	AM_RANGE (0176660, 0176667) AM_DEVREADWRITE("channel", vp1_120_device, read1, write1)	// subcpu channel 1
 	AM_RANGE (0176670, 0176677) AM_DEVREADWRITE("channel", vp1_120_device, read2, write2)	// subcpu channel 2
 	AM_RANGE (0177560, 0177567) AM_DEVREADWRITE("channel", vp1_120_device, read0, write0)	// subcpu channel 0
-//	AM_RANGE (0177570, 0177571) AM_WRITE(lights)
-	AM_RANGE (0177720, 0177723) AM_DEVREADWRITE("vhd", rt11_vhd_image_device, read, write)
 
 // HALT mode
 	AM_RANGE (0360000, 0377777) AM_RAM AM_SHARE("sram")
@@ -233,9 +230,7 @@ static ADDRESS_MAP_START(uknc_sub_mem, AS_PROGRAM, 16, uknc_state)
 	AM_RANGE (0177054, 0177055) AM_READWRITE(bcsr_r, bcsr_w)
 	AM_RANGE (0177060, 0177077) AM_DEVREADWRITE("subchan", vp1_120_sub_device, read, write)
 	AM_RANGE (0177100, 0177103) AM_DEVREADWRITE8("ppi8255", i8255_device, read, write, 0xffff)
-	AM_RANGE (0177130, 0177133) AM_UNMAP	// optional floppy
-	AM_RANGE (0177700, 0177703) AM_DEVREADWRITE("keyboard", xm1_031_kbd_device, read, write)
-	AM_RANGE (0177704, 0177707) AM_UNMAP	// reserved -- RPLY signal generated
+	AM_RANGE (0177700, 0177707) AM_DEVREADWRITE("keyboard", xm1_031_kbd_device, read, write)
 	AM_RANGE (0177710, 0177715) AM_DEVREADWRITE("timer", xm1_031_timer_device, read, write)
 	AM_RANGE (0177716, 0177717) AM_READWRITE(scsr_r, scsr_w)
 ADDRESS_MAP_END
@@ -884,8 +879,10 @@ READ16_MEMBER(uknc_state::scsr_r)
 }
 
 /*
- *	0	mapping at 100000: 0 - RAM, 1 - ROM (reset to 0)
- *	1-3	ROM cart mapping
+ *	0-3	CE0..CE3 bus signals
+ *	  CE0	mapping at 100000: 0 - RAM, 1 - ROM (reset to 0)
+ *	  CE1-2	ROM carts: bank selector
+ *	  CE3	slot number
  *	4-7	ROM banks replacement
  *	8	line clock interrupt (subcpu): 0 - enable
  *	9	line clock interrupt (maincpu): 0 - enable
@@ -952,6 +949,13 @@ static MACHINE_CONFIG_START( uknc, uknc_state )
 	 * devices on the main cpu 
 	 */
 
+	MCFG_DEVICE_ADD("qbus", QBUS, 0)
+	MCFG_QBUS_CPU(":maincpu")
+	MCFG_QBUS_OUT_BIRQ4_CB(INPUTLINE("maincpu", INPUT_LINE_VIRQ))
+	MCFG_QBUS_SLOT_ADD("qbus", "qbus1", 0, mpi_cards, "vhd")
+	MCFG_QBUS_SLOT_ADD("qbus", "qbus2", 0, mpi_cards, nullptr)
+	MCFG_QBUS_SLOT_ADD("qbus", "qbus3", 0, mpi_cards, nullptr)
+
 	MCFG_DEVICE_ADD("channel", VP1_120, 0)
 	MCFG_VP1_120_VIRQ_HANDLER(INPUTLINE("maincpu", INPUT_LINE_VIRQ))
 	MCFG_VP1_120_CHANNEL0_OUT_HANDLER(DEVWRITE16("subchan", vp1_120_sub_device, write_channel0))
@@ -990,9 +994,6 @@ static MACHINE_CONFIG_START( uknc, uknc_state )
 	MCFG_RS232_PORT_ADD("lan", default_rs232_devices, "null_modem")
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE("dl11lan", dl11_device, rx_w))
 #endif
-
-	// virtual hard disk
-	MCFG_RT11_VHD_ADD("vhd")
 
 	/*
 	 * devices on the sub cpu

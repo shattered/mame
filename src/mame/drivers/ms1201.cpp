@@ -47,14 +47,13 @@
 
 #include "emu.h"
 
+#include "bus/qbus/qbus.h"
+#include "bus/qbus/mpi_cards.h"
 #include "bus/rs232/rs232.h"
 #include "cpu/t11/t11.h"
 #include "machine/bankdev.h"
 #include "machine/clock.h"
 #include "machine/dl11.h"
-#include "machine/dvk_kgd.h"
-#include "machine/pc11.h"
-#include "machine/rt11_vhd.h"
 #include "machine/ram.h"
 #include "softlist.h"
 
@@ -79,8 +78,6 @@ public:
 		m_maincpu(*this, "maincpu"),
 		m_dl11(*this, "dl11"),
 		m_rs232(*this, "rs232"),
-		m_pc11(*this, "pc11"),
-		m_vhd(*this, "vhd"),
 		m_bankdev(*this, "bankdev0")
 	{ }
 
@@ -103,8 +100,6 @@ protected:
 	required_device<cpu_device> m_maincpu;
 	required_device<dl11_device> m_dl11;
 	required_device<rs232_port_device> m_rs232;
-	required_device<pc11_device> m_pc11;
-	required_device<rt11_vhd_image_device> m_vhd;
 	required_device<address_map_bank_device> m_bankdev;
 };
 
@@ -133,12 +128,9 @@ INPUT_PORTS_END
 static ADDRESS_MAP_START( ms1201_banked_map, AS_PROGRAM, 16, ms1201_state )
 // USER mode
 	AM_RANGE (0000000, 0157777) AM_RAM
-//	AM_RANGE (0176640, 0176647) AM_DEVREADWRITE("kgd", dvk_kgd_device, read, write)
 	AM_RANGE (0177170, 0177173) AM_NOP	// VP1-033 in RX11 floppy controller mode (device DX:)
 	AM_RANGE (0177514, 0177517) AM_NOP	// VP1-033 in LP11 parallel port mode (device LP:)
-	AM_RANGE (0177550, 0177557) AM_DEVREADWRITE("pc11", pc11_device, read, write)
 	AM_RANGE (0177560, 0177567) AM_DEVREADWRITE("dl11", dl11_device, read, write)
-	AM_RANGE (0177720, 0177723) AM_DEVREADWRITE("vhd", rt11_vhd_image_device, read, write)
 // HALT mode
 	AM_RANGE (0340000, 0357777) AM_ROM	AM_REGION("maincpu", 0)
 	AM_RANGE (0370000, 0377777) AM_RAM
@@ -177,7 +169,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(ms1201_state::pclk_timer)
 static const z80_daisy_config ms1201_daisy_chain[] =
 {
 	{ "dl11" },
-	{ "pc11" },
+//	{ "qbus" },
 	{ nullptr }
 };
 
@@ -216,6 +208,15 @@ static MACHINE_CONFIG_START( ms1201, ms1201_state )
 
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("pclk", ms1201_state, pclk_timer, attotime::from_hz(50))
 
+	MCFG_DEVICE_ADD("qbus", QBUS, 0)
+	MCFG_QBUS_CPU(":maincpu")
+	MCFG_QBUS_OUT_BIRQ4_CB(INPUTLINE("maincpu", INPUT_LINE_VIRQ))
+	// slot 0 is taken by ms1201 itself
+	MCFG_QBUS_SLOT_ADD("qbus", "qbus1", 0, mpi_cards, "pc11")
+	MCFG_QBUS_SLOT_ADD("qbus", "qbus2", 0, mpi_cards, "vhd")
+	MCFG_QBUS_SLOT_ADD("qbus", "qbus3", 0, mpi_cards, nullptr)
+	MCFG_QBUS_SLOT_ADD("qbus", "qbus4", 0, mpi_cards, nullptr)
+
 	// serial connection to host
 	MCFG_DEVICE_ADD("dl11", DL11, XTAL_4_608MHz)
 	MCFG_DL11_RXC(9600)
@@ -229,16 +230,6 @@ static MACHINE_CONFIG_START( ms1201, ms1201_state )
 
 	MCFG_RS232_PORT_ADD("rs232", default_rs232_devices, "terminal")
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE("dl11", dl11_device, rx_w))
-
-	MCFG_DEVICE_ADD("pc11", PC11, 0)
-	MCFG_PC11_RXVEC(070)
-	MCFG_PC11_TXVEC(074)
-	MCFG_PC11_RXRDY_HANDLER(INPUTLINE("maincpu", INPUT_LINE_VIRQ))
-	MCFG_PC11_TXRDY_HANDLER(INPUTLINE("maincpu", INPUT_LINE_VIRQ))
-
-	MCFG_RT11_VHD_ADD("vhd")
-
-//	MCFG_DEVICE_ADD("kgd", DVK_KGD, 0)
 
 //	MCFG_SOFTWARE_LIST_ADD("flop_list","ms1201_flop")
 //	MCFG_SOFTWARE_LIST_ADD("ptap_list","ms1201_ptap")

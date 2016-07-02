@@ -52,8 +52,9 @@ enum
 //  dvk_kgd_device - constructor
 //-------------------------------------------------
 
-dvk_kgd_device::dvk_kgd_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock) :
-	device_t(mconfig, DVK_KGD, "DVK KGD", tag, owner, clock, "dvk_kgd", __FILE__)
+dvk_kgd_device::dvk_kgd_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+	: device_t(mconfig, DVK_KGD, "DVK KGD", tag, owner, clock, "dvk_kgd", __FILE__)
+	, device_qbus_card_interface(mconfig, *this)
 	, m_screen(*this,"screen")
 {
 }
@@ -166,6 +167,10 @@ machine_config_constructor dvk_kgd_device::device_mconfig_additions() const
 void dvk_kgd_device::device_start()
 {
 	ie15_device *m_ie15;
+
+	set_qbus_device();
+	m_qbus->install_device(0176640, 0176647, read16_delegate(FUNC(dvk_kgd_device::read),this),
+		write16_delegate(FUNC(dvk_kgd_device::write),this));
 
 	// save state
 	save_item(NAME(m_cr));

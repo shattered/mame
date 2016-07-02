@@ -14,7 +14,7 @@
 //  DEVICE DEFINITIONS
 //**************************************************************************
 
-const device_type PC11 = &device_creator<pc11_device>;
+const device_type DEC_PC11 = &device_creator<pc11_device>;
 
 
 
@@ -56,13 +56,12 @@ const char* pc11_regnames[] = {
 //-------------------------------------------------
 
 pc11_device::pc11_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock) :
-	device_t(mconfig, PC11, "PC11", tag, owner, clock, "pc11", __FILE__),
+	device_t(mconfig, DEC_PC11, "PC11", tag, owner, clock, "pc11", __FILE__),
 	device_image_interface(mconfig, *this),
 	device_z80daisy_interface(mconfig, *this),
-	m_write_rxrdy(*this),
-	m_write_txrdy(*this),
-	m_rxvec(0),
-	m_txvec(0)
+	device_qbus_card_interface(mconfig, *this),
+	m_rxvec(070),
+	m_txvec(074)
 {
 }
 
@@ -73,9 +72,11 @@ pc11_device::pc11_device(const machine_config &mconfig, const char *tag, device_
 
 void pc11_device::device_start()
 {
+	set_qbus_device();
+	m_qbus->install_device(0177550, 0177557, read16_delegate(FUNC(pc11_device::read),this),
+		write16_delegate(FUNC(pc11_device::write),this));
+
 	// resolve callbacks
-	m_write_rxrdy.resolve_safe();
-	m_write_txrdy.resolve_safe();
 
 	// save state
 	save_item(NAME(m_rcsr));
@@ -101,8 +102,7 @@ void pc11_device::device_reset()
 	m_tcsr = CSR_DONE;
 	m_rxrdy = m_txrdy = CLEAR_LINE;
 
-	m_write_rxrdy(m_rxrdy);
-	m_write_txrdy(m_txrdy);
+	m_qbus->birq4_w(CLEAR_LINE);
 }
 
 int pc11_device::z80daisy_irq_state()
@@ -174,7 +174,7 @@ READ16_MEMBER( pc11_device::read )
 	case REGISTER_RBUF:
 		data = m_rbuf & 0377;
 		m_rcsr &= ~CSR_DONE;
-		clear_virq(m_write_rxrdy, m_rcsr, CSR_IE, m_rxrdy);
+		clear_virq(m_qbus->birq4_w, m_rcsr, CSR_IE, m_rxrdy);
 		break;
 	}
 
@@ -196,13 +196,13 @@ WRITE16_MEMBER( pc11_device::write )
 	{
 	case REGISTER_RCSR:
         if ((data & CSR_IE) == 0) {
-			clear_virq(m_write_rxrdy, 1, 1, m_rxrdy);
+			clear_virq(m_qbus->birq4_w, 1, 1, m_rxrdy);
 		} else if ((m_rcsr & (CSR_DONE + CSR_IE)) == CSR_DONE) {
-			raise_virq(m_write_rxrdy, 1, 1, m_rxrdy);
+			raise_virq(m_qbus->birq4_w, 1, 1, m_rxrdy);
 		}
 		if (data & CSR_GO) {
 			m_rcsr = (m_rcsr & ~CSR_DONE) | CSR_BUSY;
-			clear_virq(m_write_rxrdy, m_rcsr, CSR_IE, m_rxrdy);
+			clear_virq(m_qbus->birq4_w, m_rcsr, CSR_IE, m_rxrdy);
 		}
 		m_rcsr = ((m_rcsr & ~PTRCSR_WR) | (data & PTRCSR_WR));
 		break;
@@ -210,26 +210,6 @@ WRITE16_MEMBER( pc11_device::write )
 	case REGISTER_RBUF:
 		break;
 	}
-}
-
-
-//-------------------------------------------------
-//  rxrdy_r - receiver ready
-//-------------------------------------------------
-
-READ_LINE_MEMBER( pc11_device::rxrdy_r )
-{
-	return ((m_rcsr & (CSR_DONE|CSR_IE)) == (CSR_DONE|CSR_IE)) ? ASSERT_LINE : CLEAR_LINE;
-}
-
-
-//-------------------------------------------------
-//  txemt_r - transmitter empty
-//-------------------------------------------------
-
-READ_LINE_MEMBER( pc11_device::txemt_r )
-{
-	return ((m_tcsr & (CSR_DONE|CSR_IE)) == (CSR_DONE|CSR_IE)) ? ASSERT_LINE : CLEAR_LINE;
 }
 
 void pc11_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
@@ -246,5 +226,5 @@ void pc11_device::device_timer(emu_timer &timer, device_timer_id id, int param, 
 		m_rcsr = (m_rcsr | CSR_DONE) & ~CSR_ERR;
 		m_rbuf = reply;
 	}
-	raise_virq(m_write_rxrdy, m_rcsr, CSR_IE, m_rxrdy);
+	raise_virq(m_qbus->birq4_w, m_rcsr, CSR_IE, m_rxrdy);
 }

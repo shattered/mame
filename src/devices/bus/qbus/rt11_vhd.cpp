@@ -31,12 +31,7 @@
 
  ***************************************************************************/
 
-#include "emu.h"
-
 #include "rt11_vhd.h"
-
-#include "includes/pdp11.h"
-#include "machine/ram.h"
 
 
 /***************************************************************************
@@ -82,7 +77,8 @@ const device_type RT11_VHD = &device_creator<rt11_vhd_image_device>;
 
 rt11_vhd_image_device::rt11_vhd_image_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
 	: device_t(mconfig, RT11_VHD, "Virtual Hard Disk", tag, owner, clock, "rt11_vhd_image", __FILE__),
-		device_image_interface(mconfig, *this)
+		device_image_interface(mconfig, *this),
+		device_qbus_card_interface(mconfig, *this)
 {
 }
 
@@ -114,7 +110,12 @@ void rt11_vhd_image_device::device_config_complete()
 
 void rt11_vhd_image_device::device_start()
 {
+	set_qbus_device();
+	m_qbus->install_device(0177720, 0177723, read16_delegate(FUNC(rt11_vhd_image_device::read),this),
+		write16_delegate(FUNC(rt11_vhd_image_device::write),this));
+
 	m_status = VHDSTATUS_NO_VHD_ATTACHED;
+	// XXX
 	m_cpu = machine().device<cpu_device>("maincpu");
 	m_cpu_space = &m_cpu->space(AS_PROGRAM);
 	m_hdcsr = m_hddata = 0;

@@ -144,6 +144,9 @@ READ16_MEMBER( xm1_031_kbd_device::read )
 		m_csr &= ~CSR_DONE;
 		clear_virq(m_out_virq, m_csr, CSR_IE, m_rxrdy);
 		break;
+
+	case 2:	// 177704
+		break;
 	}
 
 	DBG_LOG(2,"XM1-031 Kbd R", ("%d == %06o\n", offset, data));

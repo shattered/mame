@@ -13,6 +13,8 @@
 
 #include "emu.h"
 
+#include "qbus.h"
+
 #include "includes/pdp11.h"
 #include "machine/ie15.h"
 
@@ -39,7 +41,8 @@
 
 // ======================> dvk_kgd_device
 
-class dvk_kgd_device : public device_t
+class dvk_kgd_device : public device_t,
+						public device_qbus_card_interface
 {
 public:
 	dvk_kgd_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock);

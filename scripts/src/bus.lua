@@ -1102,6 +1102,27 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/bus/qbus/qbus.h,BUSES["QBUS"] = true
+---------------------------------------------------
+
+if (BUSES["QBUS"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/bus/qbus/qbus.cpp",
+		MAME_DIR .. "src/devices/bus/qbus/qbus.h",
+		MAME_DIR .. "src/devices/bus/qbus/mpi_cards.cpp",
+		MAME_DIR .. "src/devices/bus/qbus/mpi_cards.h",
+		MAME_DIR .. "src/devices/bus/qbus/pc11.cpp",
+		MAME_DIR .. "src/devices/bus/qbus/pc11.h",
+		MAME_DIR .. "src/devices/bus/qbus/rt11_vhd.cpp",
+		MAME_DIR .. "src/devices/bus/qbus/rt11_vhd.h",
+		MAME_DIR .. "src/devices/bus/qbus/dvk_kgd.cpp",
+		MAME_DIR .. "src/devices/bus/qbus/dvk_kgd.h",
+	}
+end
+
+
+---------------------------------------------------
+--
 --@src/devices/bus/pc_joy/pc_joy.h,BUSES["PC_JOY"] = true
 ---------------------------------------------------
 
@@ -2474,6 +2495,17 @@ if (BUSES["EPSON_SIO"]~=null) then
 		MAME_DIR .. "src/devices/bus/epson_sio/pf10.h",
 		MAME_DIR .. "src/devices/bus/epson_sio/tf20.cpp",
 		MAME_DIR .. "src/devices/bus/epson_sio/tf20.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/bus/qbus/qbus.h,BUSES["QBUS"] = true
+---------------------------------------------------
+if (BUSES["QBUS"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/bus/qbus/qbus.cpp",
+		MAME_DIR .. "src/devices/bus/qbus/qbus.h",
 	}
 end
 
