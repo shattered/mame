@@ -194,6 +194,9 @@ public:
 	// just use it
 	device_execute_interface &execute() { return *this; }
 
+	// XXX
+	virtual void execute_set_input(int linenum, int state);
+
 protected:
 	// clock and cycle information getters
 	virtual UINT64 execute_clocks_to_cycles(UINT64 clocks) const;
@@ -208,7 +211,7 @@ protected:
 	// optional operation overrides
 	virtual void execute_run() = 0;
 	virtual void execute_burn(INT32 cycles);
-	virtual void execute_set_input(int linenum, int state);
+//	virtual void execute_set_input(int linenum, int state);
 
 	// interface-level overrides
 	virtual void interface_validity_check(validity_checker &valid) const override;

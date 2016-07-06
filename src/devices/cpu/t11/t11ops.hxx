@@ -11,21 +11,21 @@
 /* given a register index 'r', this computes the effective address for a byte-sized operation
    and puts the result in 'ea' */
 #define MAKE_EAB_RGD(r) ea = REGD(r)
-#define MAKE_EAB_IN(r)  ea = REGD(r); REGW(r) += ((r) < 6 ? 1 : 2)
-#define MAKE_EAB_INS(r) ea = REGD(r); REGW(r) += ((r) < 6 ? 1 : 2)
-#define MAKE_EAB_IND(r) ea = REGD(r); REGW(r) += 2; ea = RWORD(ea)
-#define MAKE_EAB_DE(r)  REGW(r) -= ((r) < 6 ? 1 : 2); ea = REGD(r)
-#define MAKE_EAB_DED(r) REGW(r) -= 2; ea = REGD(r); ea = RWORD(ea)
-#define MAKE_EAB_IX(r)  ea = ROPCODE(); ea = (ea + REGD(r)) & 0xffff
-#define MAKE_EAB_IXD(r) ea = ROPCODE(); ea = (ea + REGD(r)) & 0xffff; ea = RWORD(ea)
+#define MAKE_EAB_IN(r)  ea = REGD(r); REGW(r) += ((r) < 6 ? 1 : 2); SET_CPC(PC);
+#define MAKE_EAB_INS(r) ea = REGD(r); REGW(r) += ((r) < 6 ? 1 : 2); SET_CPC(PC);
+#define MAKE_EAB_IND(r) ea = REGD(r); REGW(r) += 2; SET_CPC(PC); ea = RWORD(ea); IF_BUSERR(return)
+#define MAKE_EAB_DE(r)  REGW(r) -= ((r) < 6 ? 1 : 2); SET_CPC(PC); ea = REGD(r)
+#define MAKE_EAB_DED(r) REGW(r) -= 2; SET_CPC(PC); ea = REGD(r); ea = RWORD(ea); IF_BUSERR(return)
+#define MAKE_EAB_IX(r)  ea = ROPCODE(1); IF_BUSERR(return); ea = (ea + REGD(r)) & 0xffff
+#define MAKE_EAB_IXD(r) ea = ROPCODE(1); IF_BUSERR(return); ea = (ea + REGD(r)) & 0xffff; ea = RWORD(ea); IF_BUSERR(return)
 
 /* given a register index 'r', this computes the effective address for a word-sized operation
    and puts the result in 'ea' */
 /* note that word accesses ignore the low bit!! this fixes APB! */
 #define MAKE_EAW_RGD(r) MAKE_EAB_RGD(r)
-#define MAKE_EAW_IN(r)  ea = REGD(r); REGW(r) += 2
+#define MAKE_EAW_IN(r)  ea = REGD(r); REGW(r) += 2; SET_CPC(PC)
 #define MAKE_EAW_IND(r) MAKE_EAB_IND(r)
-#define MAKE_EAW_DE(r)  REGW(r) -= 2; ea = REGD(r)
+#define MAKE_EAW_DE(r)  REGW(r) -= 2; SET_CPC(PC); ea = REGD(r)
 #define MAKE_EAW_DED(r) MAKE_EAB_DED(r)
 #define MAKE_EAW_IX(r)  MAKE_EAB_IX(r)
 #define MAKE_EAW_IXD(r) MAKE_EAB_IXD(r)
@@ -33,74 +33,76 @@
 /* extracts the source/destination register index from the opcode into 'sreg' or 'dreg' */
 #define GET_SREG sreg = (op >> 6) & 7
 #define GET_DREG dreg = op & 7
+#define EIS_SWAP op = ((op & 7) << 6) | ((op >> 6) & 7)
 
 /* for a byte-sized source operand: extracts 'sreg', computes 'ea', and loads the value into 'source' */
 #define GET_SB_RG  GET_SREG; source = REGB(sreg)
-#define GET_SB_RGD GET_SREG; MAKE_EAB_RGD(sreg); source = RBYTE(ea)
-#define GET_SB_IN  GET_SREG; if (sreg == 7) { source = ROPCODE(); } else { MAKE_EAB_IN(sreg); source = RBYTE(ea); }
-#define GET_SB_IND GET_SREG; if (sreg == 7) { ea = ROPCODE(); } else { MAKE_EAB_IND(sreg); } source = RBYTE(ea)
-#define GET_SB_DE  GET_SREG; MAKE_EAB_DE(sreg); source = RBYTE(ea)
-#define GET_SB_DED GET_SREG; MAKE_EAB_DED(sreg); source = RBYTE(ea)
-#define GET_SB_IX  GET_SREG; MAKE_EAB_IX(sreg); source = RBYTE(ea)
-#define GET_SB_IXD GET_SREG; MAKE_EAB_IXD(sreg); source = RBYTE(ea)
+#define GET_SB_RGD GET_SREG; MAKE_EAB_RGD(sreg); source = RBYTE(ea); IF_BUSERR(return)
+
+#define GET_SB_IN  GET_SREG; if (sreg == 7) { source = ROPCODE(1); IF_BUSERR(return); } else { MAKE_EAB_IN(sreg); source = RBYTE(ea); IF_BUSERR(return); }
+#define GET_SB_IND GET_SREG; if (sreg == 7) { ea = ROPCODE(1); IF_BUSERR(return); } else { MAKE_EAB_IND(sreg); } source = RBYTE(ea); IF_BUSERR(return)
+#define GET_SB_DE  GET_SREG; MAKE_EAB_DE(sreg); source = RBYTE(ea); IF_BUSERR(return)
+#define GET_SB_DED GET_SREG; MAKE_EAB_DED(sreg); source = RBYTE(ea); IF_BUSERR(return)
+#define GET_SB_IX  GET_SREG; MAKE_EAB_IX(sreg); source = RBYTE(ea); IF_BUSERR(return)
+#define GET_SB_IXD GET_SREG; MAKE_EAB_IXD(sreg); source = RBYTE(ea); IF_BUSERR(return)
 
 /* for a word-sized source operand: extracts 'sreg', computes 'ea', and loads the value into 'source' */
 #define GET_SW_RG  GET_SREG; source = REGD(sreg)
-#define GET_SW_RGD GET_SREG; MAKE_EAW_RGD(sreg); source = RWORD(ea)
-#define GET_SW_IN  GET_SREG; if (sreg == 7) { source = ROPCODE(); } else { MAKE_EAW_IN(sreg); source = RWORD(ea); }
-#define GET_SW_IND GET_SREG; if (sreg == 7) { ea = ROPCODE(); } else { MAKE_EAW_IND(sreg); } source = RWORD(ea)
-#define GET_SW_DE  GET_SREG; MAKE_EAW_DE(sreg); source = RWORD(ea)
-#define GET_SW_DED GET_SREG; MAKE_EAW_DED(sreg); source = RWORD(ea)
-#define GET_SW_IX  GET_SREG; MAKE_EAW_IX(sreg); source = RWORD(ea)
-#define GET_SW_IXD GET_SREG; MAKE_EAW_IXD(sreg); source = RWORD(ea)
+#define GET_SW_RGD GET_SREG; MAKE_EAW_RGD(sreg); source = RWORD(ea); IF_BUSERR(return)
+#define GET_SW_IN  GET_SREG; if (sreg == 7) { source = ROPCODE(1); IF_BUSERR(return); } else { MAKE_EAW_IN(sreg); source = RWORD(ea); IF_BUSERR(return); }
+#define GET_SW_IND GET_SREG; if (sreg == 7) { ea = ROPCODE(1); IF_BUSERR(return); } else { MAKE_EAW_IND(sreg); } source = RWORD(ea); IF_BUSERR(return)
+#define GET_SW_DE  GET_SREG; MAKE_EAW_DE(sreg); source = RWORD(ea); IF_BUSERR(return)
+#define GET_SW_DED GET_SREG; MAKE_EAW_DED(sreg); source = RWORD(ea); IF_BUSERR(return)
+#define GET_SW_IX  GET_SREG; MAKE_EAW_IX(sreg); source = RWORD(ea); IF_BUSERR(return)
+#define GET_SW_IXD GET_SREG; MAKE_EAW_IXD(sreg); source = RWORD(ea); IF_BUSERR(return)
 
 /* for a byte-sized destination operand: extracts 'dreg', computes 'ea', and loads the value into 'dest' */
 #define GET_DB_RG  GET_DREG; dest = REGB(dreg)
-#define GET_DB_RGD GET_DREG; MAKE_EAB_RGD(dreg); dest = RBYTE(ea)
-#define GET_DB_IN  GET_DREG; MAKE_EAB_IN(dreg); dest = RBYTE(ea)
-#define GET_DB_IND GET_DREG; if (dreg == 7) { ea = ROPCODE(); } else { MAKE_EAB_IND(dreg); } dest = RBYTE(ea)
-#define GET_DB_DE  GET_DREG; MAKE_EAB_DE(dreg); dest = RBYTE(ea)
-#define GET_DB_DED GET_DREG; MAKE_EAB_DED(dreg); dest = RBYTE(ea)
-#define GET_DB_IX  GET_DREG; MAKE_EAB_IX(dreg); dest = RBYTE(ea)
-#define GET_DB_IXD GET_DREG; MAKE_EAB_IXD(dreg); dest = RBYTE(ea)
+#define GET_DB_RGD GET_DREG; MAKE_EAB_RGD(dreg); dest = RBYTE(ea); IF_BUSERR(return)
+#define GET_DB_IN  GET_DREG; MAKE_EAB_IN(dreg); dest = RBYTE(ea); IF_BUSERR(return)
+#define GET_DB_IND GET_DREG; if (dreg == 7) { ea = ROPCODE(1); IF_BUSERR(return); } else { MAKE_EAB_IND(dreg); } dest = RBYTE(ea); IF_BUSERR(return)
+#define GET_DB_DE  GET_DREG; MAKE_EAB_DE(dreg); dest = RBYTE(ea); IF_BUSERR(return)
+#define GET_DB_DED GET_DREG; MAKE_EAB_DED(dreg); dest = RBYTE(ea); IF_BUSERR(return)
+#define GET_DB_IX  GET_DREG; MAKE_EAB_IX(dreg); dest = RBYTE(ea); IF_BUSERR(return)
+#define GET_DB_IXD GET_DREG; MAKE_EAB_IXD(dreg); dest = RBYTE(ea); IF_BUSERR(return)
 
 /* for a word-sized destination operand: extracts 'dreg', computes 'ea', and loads the value into 'dest' */
 #define GET_DW_RG  GET_DREG; dest = REGD(dreg)
-#define GET_DW_RGD GET_DREG; MAKE_EAW_RGD(dreg); dest = RWORD(ea)
-#define GET_DW_IN  GET_DREG; MAKE_EAW_IN(dreg); dest = RWORD(ea)
-#define GET_DW_IND GET_DREG; if (dreg == 7) { ea = ROPCODE(); } else { MAKE_EAW_IND(dreg); } dest = RWORD(ea)
-#define GET_DW_DE  GET_DREG; MAKE_EAW_DE(dreg); dest = RWORD(ea)
-#define GET_DW_DED GET_DREG; MAKE_EAW_DED(dreg); dest = RWORD(ea)
-#define GET_DW_IX  GET_DREG; MAKE_EAW_IX(dreg); dest = RWORD(ea)
-#define GET_DW_IXD GET_DREG; MAKE_EAW_IXD(dreg); dest = RWORD(ea)
+#define GET_DW_RGD GET_DREG; MAKE_EAW_RGD(dreg); dest = RWORD(ea); IF_BUSERR(return)
+#define GET_DW_IN  GET_DREG; MAKE_EAW_IN(dreg); dest = RWORD(ea); IF_BUSERR(return)
+#define GET_DW_IND GET_DREG; if (dreg == 7) { ea = ROPCODE(1); IF_BUSERR(return); } else { MAKE_EAW_IND(dreg); } dest = RWORD(ea); IF_BUSERR(return)
+#define GET_DW_DE  GET_DREG; MAKE_EAW_DE(dreg); dest = RWORD(ea); IF_BUSERR(return)
+#define GET_DW_DED GET_DREG; MAKE_EAW_DED(dreg); dest = RWORD(ea); IF_BUSERR(return)
+#define GET_DW_IX  GET_DREG; MAKE_EAW_IX(dreg); dest = RWORD(ea); IF_BUSERR(return)
+#define GET_DW_IXD GET_DREG; MAKE_EAW_IXD(dreg); dest = RWORD(ea); IF_BUSERR(return)
 
 /* writes a value to a previously computed 'ea' */
-#define PUT_DB_EA(v) WBYTE(ea, (v))
-#define PUT_DW_EA(v) WWORD(ea, (v))
+#define PUT_DB_EA(v) WBYTE(ea, (v)); IF_BUSERR(return)
+#define PUT_DW_EA(v) WWORD(ea, (v)); IF_BUSERR(return)
 
 /* writes a value to a previously computed 'dreg' register */
 #define PUT_DB_DREG(v) REGB(dreg) = (v)
-#define PUT_DW_DREG(v) REGW(dreg) = (v)
+#define PUT_DW_DREG(v) REGW(dreg) = (v); SET_CPC(PC)
 
 /* for a byte-sized destination operand: extracts 'dreg', computes 'ea', and writes 'v' to it */
 #define PUT_DB_RG(v)  GET_DREG; REGB(dreg) = (v)
-#define PUT_DB_RGD(v) GET_DREG; MAKE_EAB_RGD(dreg); WBYTE(ea, (v))
-#define PUT_DB_IN(v)  GET_DREG; MAKE_EAB_IN(dreg); WBYTE(ea, (v))
-#define PUT_DB_IND(v) GET_DREG; if (dreg == 7) { ea = ROPCODE(); } else { MAKE_EAB_IND(dreg); } WBYTE(ea, (v))
-#define PUT_DB_DE(v)  GET_DREG; MAKE_EAB_DE(dreg); WBYTE(ea, (v))
-#define PUT_DB_DED(v) GET_DREG; MAKE_EAB_DED(dreg); WBYTE(ea, (v))
-#define PUT_DB_IX(v)  GET_DREG; MAKE_EAB_IX(dreg); WBYTE(ea, (v))
-#define PUT_DB_IXD(v) GET_DREG; MAKE_EAB_IXD(dreg); WBYTE(ea, (v))
+#define PUT_DB_RGD(v) GET_DREG; MAKE_EAB_RGD(dreg); WBYTE(ea, (v)); IF_BUSERR(return)
+#define PUT_DB_IN(v)  GET_DREG; MAKE_EAB_IN(dreg); WBYTE(ea, (v)); IF_BUSERR(return)
+#define PUT_DB_IND(v) GET_DREG; if (dreg == 7) { ea = ROPCODE(1); IF_BUSERR(return); } else { MAKE_EAB_IND(dreg); } WBYTE(ea, (v)); IF_BUSERR(return)
+#define PUT_DB_DE(v)  GET_DREG; MAKE_EAB_DE(dreg); WBYTE(ea, (v)); IF_BUSERR(return)
+#define PUT_DB_DED(v) GET_DREG; MAKE_EAB_DED(dreg); WBYTE(ea, (v)); IF_BUSERR(return)
+#define PUT_DB_IX(v)  GET_DREG; MAKE_EAB_IX(dreg); WBYTE(ea, (v)); IF_BUSERR(return)
+#define PUT_DB_IXD(v) GET_DREG; MAKE_EAB_IXD(dreg); WBYTE(ea, (v)); IF_BUSERR(return)
 
 /* for a word-sized destination operand: extracts 'dreg', computes 'ea', and writes 'v' to it */
-#define PUT_DW_RG(v)  GET_DREG; REGW(dreg) = (v)
-#define PUT_DW_RGD(v) GET_DREG; MAKE_EAW_RGD(dreg); WWORD(ea, (v))
-#define PUT_DW_IN(v)  GET_DREG; MAKE_EAW_IN(dreg); WWORD(ea, (v))
-#define PUT_DW_IND(v) GET_DREG; if (dreg == 7) { ea = ROPCODE(); } else { MAKE_EAW_IND(dreg); } WWORD(ea, (v))
-#define PUT_DW_DE(v)  GET_DREG; MAKE_EAW_DE(dreg); WWORD(ea, (v))
-#define PUT_DW_DED(v) GET_DREG; MAKE_EAW_DED(dreg); WWORD(ea, (v))
-#define PUT_DW_IX(v)  GET_DREG; MAKE_EAW_IX(dreg); WWORD(ea, (v))
-#define PUT_DW_IXD(v) GET_DREG; MAKE_EAW_IXD(dreg); WWORD(ea, (v))
+#define PUT_DW_RG(v)  GET_DREG; REGW(dreg) = (v); SET_CPC(PC)
+#define PUT_DW_RGD(v) GET_DREG; MAKE_EAW_RGD(dreg); WWORD(ea, (v)); IF_BUSERR(return)
+#define PUT_DW_IN(v)  GET_DREG; MAKE_EAW_IN(dreg); WWORD(ea, (v)); IF_BUSERR(return)
+#define PUT_DW_IND(v) GET_DREG; if (dreg == 7) { ea = ROPCODE(1); IF_BUSERR(return); } else { MAKE_EAW_IND(dreg); } WWORD(ea, (v)); IF_BUSERR(return)
+#define PUT_DW_DE(v)  GET_DREG; MAKE_EAW_DE(dreg); WWORD(ea, (v)); IF_BUSERR(return)
+#define PUT_DW_DED(v) GET_DREG; MAKE_EAW_DED(dreg); WWORD(ea, (v)); IF_BUSERR(return)
+#define PUT_DW_IX(v)  GET_DREG; MAKE_EAW_IX(dreg); WWORD(ea, (v)); IF_BUSERR(return)
+#define PUT_DW_IXD(v) GET_DREG; MAKE_EAW_IXD(dreg); WWORD(ea, (v)); IF_BUSERR(return)
 
 /* flag clearing; must be done before setting */
 #define CLR_ZV   (PSW &= ~(ZFLAG | VFLAG))
@@ -125,165 +127,495 @@
 #define SETW_NZV SETW_N; SETW_Z; SETW_V
 #define SETW_NZVC SETW_N; SETW_Z; SETW_V; SETW_C
 
+/* SIMH */
+#define GET_ZERO(v)     ((v) == 0)
+#define GET_SIGN_W(v)   (((v) >> 15) & 1)
+#define GET_SIGN_B(v)   (((v) >> 7) & 1)
+
 /* operations */
 /* ADC: dst += C */
-#define ADC_R(d)    int dreg, source, dest, result;     source = GET_C; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; PUT_DW_DREG(result)
-#define ADC_M(d)    int dreg, source, dest, result, ea; source = GET_C; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; PUT_DW_EA(result)
-#define ADCB_R(d)   int dreg, source, dest, result;     source = GET_C; GET_DB_##d; CLR_NZVC; result = dest + source; SETB_NZVC; PUT_DB_DREG(result)
-#define ADCB_M(d)   int dreg, source, dest, result, ea; source = GET_C; GET_DB_##d; CLR_NZVC; result = dest + source; SETB_NZVC; PUT_DB_EA(result)
+#define ADC_R(d)    int dreg, source, dest, result;     source = GET_C; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define ADC_M(d)    int dreg, source, dest, result, ea; source = GET_C; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define ADCB_R(d)   int dreg, source, dest, result;     source = GET_C; GET_DB_##d; CLR_NZVC; result = dest + source; SETB_NZVC; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define ADCB_M(d)   int dreg, source, dest, result, ea; source = GET_C; GET_DB_##d; CLR_NZVC; result = dest + source; SETB_NZVC; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* ADD: dst += src */
-#define ADD_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; PUT_DW_DREG(result)
-#define ADD_X(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; PUT_DW_DREG(result)
-#define ADD_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; PUT_DW_EA(result)
+#define ADD_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define ADD_X(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define ADD_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest + source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_EA(result)
 /* ASL: dst = (dst << 1); C = (dst >> 7) */
-#define ASL_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = dest << 1; SETW_NZ; PSW |= (dest >> 15) & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DW_DREG(result)
-#define ASL_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = dest << 1; SETW_NZ; PSW |= (dest >> 15) & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DW_EA(result)
-#define ASLB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = dest << 1; SETB_NZ; PSW |= (dest >> 7) & 1;  PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DB_DREG(result)
-#define ASLB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = dest << 1; SETB_NZ; PSW |= (dest >> 7) & 1;  PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DB_EA(result)
+#define ASL_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = dest << 1; SETW_NZ; PSW |= (dest >> 15) & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define ASL_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = dest << 1; SETW_NZ; PSW |= (dest >> 15) & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define ASLB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = dest << 1; SETB_NZ; PSW |= (dest >> 7) & 1;  PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define ASLB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = dest << 1; SETB_NZ; PSW |= (dest >> 7) & 1;  PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* ASR: dst = (dst << 1); C = (dst >> 7) */
-#define ASR_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = (dest >> 1) | (dest & 0x8000); SETW_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DW_DREG(result)
-#define ASR_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = (dest >> 1) | (dest & 0x8000); SETW_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DW_EA(result)
-#define ASRB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = (dest >> 1) | (dest & 0x80);   SETB_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DB_DREG(result)
-#define ASRB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = (dest >> 1) | (dest & 0x80);   SETB_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DB_EA(result)
+#define ASR_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = (dest >> 1) | (dest & 0x8000); SETW_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define ASR_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = (dest >> 1) | (dest & 0x8000); SETW_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define ASRB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = (dest >> 1) | (dest & 0x80);   SETB_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define ASRB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = (dest >> 1) | (dest & 0x80);   SETB_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DB_EA(result)
+
 /* BIC: dst &= ~src */
-#define BIC_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & ~source; SETW_NZ; PUT_DW_DREG(result)
-#define BIC_X(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & ~source; SETW_NZ; PUT_DW_DREG(result)
-#define BIC_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & ~source; SETW_NZ; PUT_DW_EA(result)
-#define BICB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & ~source; SETB_NZ; PUT_DB_DREG(result)
-#define BICB_X(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & ~source; SETB_NZ; PUT_DB_DREG(result)
-#define BICB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & ~source; SETB_NZ; PUT_DB_EA(result)
+#define BIC_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & ~source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define BIC_X(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & ~source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define BIC_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & ~source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define BICB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & ~source; SETB_NZ; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define BICB_X(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & ~source; SETB_NZ; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define BICB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & ~source; SETB_NZ; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* BIS: dst |= src */
-#define BIS_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest | source; SETW_NZ; PUT_DW_DREG(result)
-#define BIS_X(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest | source; SETW_NZ; PUT_DW_DREG(result)
-#define BIS_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest | source; SETW_NZ; PUT_DW_EA(result)
-#define BISB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest | source; SETB_NZ; PUT_DB_DREG(result)
-#define BISB_X(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest | source; SETB_NZ; PUT_DB_DREG(result)
-#define BISB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest | source; SETB_NZ; PUT_DB_EA(result)
+#define BIS_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest | source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define BIS_X(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest | source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define BIS_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest | source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define BISB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest | source; SETB_NZ; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define BISB_X(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest | source; SETB_NZ; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define BISB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest | source; SETB_NZ; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* BIT: flags = dst & src */
-#define BIT_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & source; SETW_NZ;
-#define BIT_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & source; SETW_NZ;
-#define BITB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & source; SETB_NZ;
-#define BITB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & source; SETB_NZ;
+#define BIT_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & source; SETW_NZ; SET_CPSW(PSW,0)
+#define BIT_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZV; result = dest & source; SETW_NZ; SET_CPSW(PSW,0)
+#define BITB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & source; SETB_NZ; SET_CPSW(PSW,0)
+#define BITB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZV; result = dest & source; SETB_NZ; SET_CPSW(PSW,0)
 /* BR: if (condition) branch */
-#define BR(c)       if (c) { PC += 2 * (signed char)(op & 0xff); }
+#define BR(c)       if (c) { PC += 2 * (signed char)(op & 0xff); SET_CPC(PC); }
 /* CLR: dst = 0 */
-#define CLR_R(d)    int dreg;     PUT_DW_##d(0); CLR_NZVC; SET_Z
-#define CLR_M(d)    int dreg, ea; PUT_DW_##d(0); CLR_NZVC; SET_Z
-#define CLRB_R(d)   int dreg;     PUT_DB_##d(0); CLR_NZVC; SET_Z
-#define CLRB_M(d)   int dreg, ea; PUT_DB_##d(0); CLR_NZVC; SET_Z
+#define CLR_R(d)    int dreg;     PUT_DW_##d(0); CLR_NZVC; SET_Z; SET_CPSW(PSW,0)
+#define CLR_M(d)    int dreg, ea; PUT_DW_##d(0); CLR_NZVC; SET_Z; SET_CPSW(PSW,0)
+#define CLRB_R(d)   int dreg;     PUT_DB_##d(0); CLR_NZVC; SET_Z; SET_CPSW(PSW,0)
+#define CLRB_M(d)   int dreg, ea; PUT_DB_##d(0); CLR_NZVC; SET_Z; SET_CPSW(PSW,0)
 /* CMP: flags = src - dst */
-#define CMP_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZVC; result = source - dest; SETW_NZVC;
-#define CMP_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = source - dest; SETW_NZVC;
-#define CMPB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZVC; result = source - dest; SETB_NZVC;
-#define CMPB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZVC; result = source - dest; SETB_NZVC;
+#define CMP_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZVC; result = source - dest; SETW_NZVC; SET_CPSW(PSW,0)
+#define CMP_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = source - dest; SETW_NZVC; SET_CPSW(PSW,0)
+#define CMPB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZVC; result = source - dest; SETB_NZVC; SET_CPSW(PSW,0)
+#define CMPB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZVC; result = source - dest; SETB_NZVC; SET_CPSW(PSW,0)
+
 /* COM: dst = ~dst */
-#define COM_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = ~dest; SETW_NZ; SET_C; PUT_DW_DREG(result)
-#define COM_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = ~dest; SETW_NZ; SET_C; PUT_DW_EA(result)
-#define COMB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = ~dest; SETB_NZ; SET_C; PUT_DB_DREG(result)
-#define COMB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = ~dest; SETB_NZ; SET_C; PUT_DB_EA(result)
+#define COM_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = ~dest; SETW_NZ; SET_C; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define COM_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = ~dest; SETW_NZ; SET_C; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define COMB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = ~dest; SETB_NZ; SET_C; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define COMB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = ~dest; SETB_NZ; SET_C; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* DEC: dst -= 1 */
-#define DEC_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZV; result = dest - 1; SETW_NZ; if (dest == 0x8000) SET_V; PUT_DW_DREG(result)
-#define DEC_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZV; result = dest - 1; SETW_NZ; if (dest == 0x8000) SET_V; PUT_DW_EA(result)
-#define DECB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZV; result = dest - 1; SETB_NZ; if (dest == 0x80)   SET_V; PUT_DB_DREG(result)
-#define DECB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZV; result = dest - 1; SETB_NZ; if (dest == 0x80)   SET_V; PUT_DB_EA(result)
+#define DEC_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZV; result = dest - 1; SETW_NZ; if (dest == 0x8000) SET_V; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define DEC_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZV; result = dest - 1; SETW_NZ; if (dest == 0x8000) SET_V; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define DECB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZV; result = dest - 1; SETB_NZ; if (dest == 0x80)   SET_V; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define DECB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZV; result = dest - 1; SETB_NZ; if (dest == 0x80)   SET_V; SET_CPSW(PSW,0); PUT_DB_EA(result)
+
 /* INC: dst += 1 */
-#define INC_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZV; result = dest + 1; SETW_NZ; if (dest == 0x7fff) SET_V; PUT_DW_DREG(result)
-#define INC_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZV; result = dest + 1; SETW_NZ; if (dest == 0x7fff) SET_V; PUT_DW_EA(result)
-#define INCB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZV; result = dest + 1; SETB_NZ; if (dest == 0x7f)   SET_V; PUT_DB_DREG(result)
-#define INCB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZV; result = dest + 1; SETB_NZ; if (dest == 0x7f)   SET_V; PUT_DB_EA(result)
+#define INC_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZV; result = dest + 1; SETW_NZ; if (dest == 0x7fff) SET_V; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define INC_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZV; result = dest + 1; SETW_NZ; if (dest == 0x7fff) SET_V; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define INCB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZV; result = dest + 1; SETB_NZ; if (dest == 0x7f)   SET_V; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define INCB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZV; result = dest + 1; SETB_NZ; if (dest == 0x7f)   SET_V; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* JMP: PC = ea */
-#define JMP(d)      int dreg, ea; GET_DREG; MAKE_EAW_##d(dreg); PC = ea
+#define JMP(d)      int dreg, ea; GET_DREG; MAKE_EAW_##d(dreg); SET_CPC(ea)
 /* JSR: PUSH src, src = PC, PC = ea */
-#define JSR(d)      int sreg, dreg, ea; GET_SREG; GET_DREG; MAKE_EAW_##d(dreg); PUSH(REGW(sreg)); REGW(sreg) = PC; PC = ea
+#define JSR(d)      int sreg, dreg, ea; GET_SREG; GET_DREG; MAKE_EAW_##d(dreg); PUSH(REGW(sreg)); REGW(sreg) = PC; SET_CPC(ea)
 /* MFPS: dst = flags */
 #define MFPS_R(d)   int dreg, result;     result = PSW; CLR_NZV; SETB_NZ; PUT_DW_##d((signed char)result)
 #define MFPS_M(d)   int dreg, result, ea; result = PSW; CLR_NZV; SETB_NZ; PUT_DB_##d(result)
 /* MOV: dst = src */
-#define MOV_R(s,d)  int sreg, dreg, source, result;     GET_SW_##s; CLR_NZV; result = source; SETW_NZ; PUT_DW_##d(result)
-#define MOV_M(s,d)  int sreg, dreg, source, result, ea; GET_SW_##s; CLR_NZV; result = source; SETW_NZ; PUT_DW_##d(result)
-#define MOVB_R(s,d) int sreg, dreg, source, result;     GET_SB_##s; CLR_NZV; result = source; SETB_NZ; PUT_DW_##d((signed char)result)
-#define MOVB_X(s,d) int sreg, dreg, source, result, ea; GET_SB_##s; CLR_NZV; result = source; SETB_NZ; PUT_DW_##d((signed char)result)
-#define MOVB_M(s,d) int sreg, dreg, source, result, ea; GET_SB_##s; CLR_NZV; result = source; SETB_NZ; PUT_DB_##d(result)
+#define MOV_R(s,d)  int sreg, dreg, source, result;     GET_SW_##s; CLR_NZV; result = source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_##d(result)
+#define MOV_M(s,d)  int sreg, dreg, source, result, ea; GET_SW_##s; CLR_NZV; result = source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_##d(result)
+#define MOVB_R(s,d) int sreg, dreg, source, result;     GET_SB_##s; CLR_NZV; result = source; SETB_NZ; SET_CPSW(PSW,0); PUT_DW_##d((signed char)result)
+#define MOVB_X(s,d) int sreg, dreg, source, result, ea; GET_SB_##s; CLR_NZV; result = source; SETB_NZ; SET_CPSW(PSW,0); PUT_DW_##d((signed char)result)
+#define MOVB_M(s,d) int sreg, dreg, source, result, ea; GET_SB_##s; CLR_NZV; result = source; SETB_NZ; SET_CPSW(PSW,0); PUT_DB_##d(result)
+
 /* MTPS: flags = src */
-#define MTPS_R(d)   int dreg, dest;     GET_DW_##d; PSW = (PSW & ~0xef) | (dest & 0xef); t11_check_irqs()
-#define MTPS_M(d)   int dreg, dest, ea; GET_DW_##d; PSW = (PSW & ~0xef) | (dest & 0xef); t11_check_irqs()
+#define MTPS_R(d)   int dreg, dest;     GET_DW_##d; dest = (PSW & ~255) | (dest & 255); SET_CPSW(dest,0); t11_check_irqs()
+#define MTPS_M(d)   int dreg, dest, ea; GET_DW_##d; dest = (PSW & ~255) | (dest & 255); SET_CPSW(dest,0); t11_check_irqs()
 /* NEG: dst = -dst */
-#define NEG_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = -dest; SETW_NZ; if (dest == 0x8000) SET_V; if (result) SET_C; PUT_DW_DREG(result)
-#define NEG_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = -dest; SETW_NZ; if (dest == 0x8000) SET_V; if (result) SET_C; PUT_DW_EA(result)
-#define NEGB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = -dest; SETB_NZ; if (dest == 0x80)   SET_V; if (result) SET_C; PUT_DB_DREG(result)
-#define NEGB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = -dest; SETB_NZ; if (dest == 0x80)   SET_V; if (result) SET_C; PUT_DB_EA(result)
+#define NEG_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = -dest; SETW_NZ; if (dest == 0x8000) SET_V; if (result) SET_C; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define NEG_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = -dest; SETW_NZ; if (dest == 0x8000) SET_V; if (result) SET_C; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define NEGB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = -dest; SETB_NZ; if (dest == 0x80)   SET_V; if (result) SET_C; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define NEGB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = -dest; SETB_NZ; if (dest == 0x80)   SET_V; if (result) SET_C; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* ROL: dst = (dst << 1) | C; C = (dst >> 7) */
-#define ROL_R(d)    int dreg, dest, result;     GET_DW_##d; result = (dest << 1) | GET_C; CLR_NZVC; SETW_NZ; PSW |= (dest >> 15) & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DW_DREG(result)
-#define ROL_M(d)    int dreg, dest, result, ea; GET_DW_##d; result = (dest << 1) | GET_C; CLR_NZVC; SETW_NZ; PSW |= (dest >> 15) & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DW_EA(result)
-#define ROLB_R(d)   int dreg, dest, result;     GET_DB_##d; result = (dest << 1) | GET_C; CLR_NZVC; SETB_NZ; PSW |= (dest >> 7) & 1;  PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DB_DREG(result)
-#define ROLB_M(d)   int dreg, dest, result, ea; GET_DB_##d; result = (dest << 1) | GET_C; CLR_NZVC; SETB_NZ; PSW |= (dest >> 7) & 1;  PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DB_EA(result)
+#define ROL_R(d)    int dreg, dest, result;     GET_DW_##d; result = (dest << 1) | GET_C; CLR_NZVC; SETW_NZ; PSW |= (dest >> 15) & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define ROL_M(d)    int dreg, dest, result, ea; GET_DW_##d; result = (dest << 1) | GET_C; CLR_NZVC; SETW_NZ; PSW |= (dest >> 15) & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define ROLB_R(d)   int dreg, dest, result;     GET_DB_##d; result = (dest << 1) | GET_C; CLR_NZVC; SETB_NZ; PSW |= (dest >> 7) & 1;  PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define ROLB_M(d)   int dreg, dest, result, ea; GET_DB_##d; result = (dest << 1) | GET_C; CLR_NZVC; SETB_NZ; PSW |= (dest >> 7) & 1;  PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* ROR: dst = (dst >> 1) | (C << 7); C = dst & 1 */
-#define ROR_R(d)    int dreg, dest, result;     GET_DW_##d; result = (dest >> 1) | (GET_C << 15); CLR_NZVC; SETW_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DW_DREG(result)
-#define ROR_M(d)    int dreg, dest, result, ea; GET_DW_##d; result = (dest >> 1) | (GET_C << 15); CLR_NZVC; SETW_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DW_EA(result)
-#define RORB_R(d)   int dreg, dest, result;     GET_DB_##d; result = (dest >> 1) | (GET_C << 7);  CLR_NZVC; SETB_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DB_DREG(result)
-#define RORB_M(d)   int dreg, dest, result, ea; GET_DB_##d; result = (dest >> 1) | (GET_C << 7);  CLR_NZVC; SETB_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; PUT_DB_EA(result)
+#define ROR_R(d)    int dreg, dest, result;     GET_DW_##d; result = (dest >> 1) | (GET_C << 15); CLR_NZVC; SETW_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define ROR_M(d)    int dreg, dest, result, ea; GET_DW_##d; result = (dest >> 1) | (GET_C << 15); CLR_NZVC; SETW_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define RORB_R(d)   int dreg, dest, result;     GET_DB_##d; result = (dest >> 1) | (GET_C << 7);  CLR_NZVC; SETB_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define RORB_M(d)   int dreg, dest, result, ea; GET_DB_##d; result = (dest >> 1) | (GET_C << 7);  CLR_NZVC; SETB_NZ; PSW |= dest & 1; PSW |= ((PSW << 1) ^ (PSW >> 2)) & 2; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* SBC: dst -= C */
-#define SBC_R(d)    int dreg, source, dest, result;     source = GET_C; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; PUT_DW_DREG(result)
-#define SBC_M(d)    int dreg, source, dest, result, ea; source = GET_C; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; PUT_DW_EA(result)
-#define SBCB_R(d)   int dreg, source, dest, result;     source = GET_C; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; PUT_DB_DREG(result)
-#define SBCB_M(d)   int dreg, source, dest, result, ea; source = GET_C; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; PUT_DB_EA(result)
+#define SBC_R(d)    int dreg, source, dest, result;     source = GET_C; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define SBC_M(d)    int dreg, source, dest, result, ea; source = GET_C; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define SBCB_R(d)   int dreg, source, dest, result;     source = GET_C; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define SBCB_M(d)   int dreg, source, dest, result, ea; source = GET_C; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* SUB: dst -= src */
-#define SUB_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; PUT_DW_DREG(result)
-#define SUB_X(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; PUT_DW_DREG(result)
-#define SUB_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; PUT_DW_EA(result)
-#define SUBB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; PUT_DB_DREG(result)
-#define SUBB_X(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; PUT_DB_DREG(result)
-#define SUBB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; PUT_DB_EA(result)
+#define SUB_R(s,d)  int sreg, dreg, source, dest, result;     GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define SUB_X(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define SUB_M(s,d)  int sreg, dreg, source, dest, result, ea; GET_SW_##s; GET_DW_##d; CLR_NZVC; result = dest - source; SETW_NZVC; SET_CPSW(PSW,0); PUT_DW_EA(result)
+#define SUBB_R(s,d) int sreg, dreg, source, dest, result;     GET_SB_##s; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define SUBB_X(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; SET_CPSW(PSW,0); PUT_DB_DREG(result)
+#define SUBB_M(s,d) int sreg, dreg, source, dest, result, ea; GET_SB_##s; GET_DB_##d; CLR_NZVC; result = dest - source; SETB_NZVC; SET_CPSW(PSW,0); PUT_DB_EA(result)
 /* SWAB: dst = (dst >> 8) + (dst << 8) */
-#define SWAB_R(d)   int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = ((dest >> 8) & 0xff) + (dest << 8); SETB_NZ; PUT_DW_DREG(result)
-#define SWAB_M(d)   int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = ((dest >> 8) & 0xff) + (dest << 8); SETB_NZ; PUT_DW_EA(result)
+#define SWAB_R(d)   int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = ((dest >> 8) & 0xff) + (dest << 8); SETB_NZ; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define SWAB_M(d)   int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = ((dest >> 8) & 0xff) + (dest << 8); SETB_NZ; SET_CPSW(PSW,0); PUT_DW_EA(result)
 /* SXT: dst = sign-extend dst */
-#define SXT_R(d)    int dreg, result;     CLR_ZV; if (GET_N) result = -1; else { result = 0; SET_Z; } PUT_DW_##d(result)
-#define SXT_M(d)    int dreg, result, ea; CLR_ZV; if (GET_N) result = -1; else { result = 0; SET_Z; } PUT_DW_##d(result)
+#define SXT_R(d)    int dreg, result;     CLR_ZV; if (GET_N) result = -1; else { result = 0; SET_Z; } SET_CPSW(PSW,0); PUT_DW_##d(result)
+#define SXT_M(d)    int dreg, result, ea; CLR_ZV; if (GET_N) result = -1; else { result = 0; SET_Z; } SET_CPSW(PSW,0); PUT_DW_##d(result)
 /* TST: dst = ~dst */
-#define TST_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = dest; SETW_NZ;
-#define TST_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = dest; SETW_NZ;
-#define TSTB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = dest; SETB_NZ;
-#define TSTB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = dest; SETB_NZ;
+#define TST_R(d)    int dreg, dest, result;     GET_DW_##d; CLR_NZVC; result = dest; SETW_NZ; SET_CPSW(PSW,0)
+#define TST_M(d)    int dreg, dest, result, ea; GET_DW_##d; CLR_NZVC; result = dest; SETW_NZ; SET_CPSW(PSW,0)
+#define TSTB_R(d)   int dreg, dest, result;     GET_DB_##d; CLR_NZVC; result = dest; SETB_NZ; SET_CPSW(PSW,0)
+#define TSTB_M(d)   int dreg, dest, result, ea; GET_DB_##d; CLR_NZVC; result = dest; SETB_NZ; SET_CPSW(PSW,0)
 /* XOR: dst ^= src */
-#define XOR_R(d)    int sreg, dreg, source, dest, result;     GET_SREG; source = REGW(sreg); GET_DW_##d; CLR_NZV; result = dest ^ source; SETW_NZ; PUT_DW_DREG(result)
-#define XOR_M(d)    int sreg, dreg, source, dest, result, ea; GET_SREG; source = REGW(sreg); GET_DW_##d; CLR_NZV; result = dest ^ source; SETW_NZ; PUT_DW_EA(result)
+#define XOR_R(d)    int sreg, dreg, source, dest, result;     GET_SREG; source = REGW(sreg); GET_DW_##d; CLR_NZV; result = dest ^ source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_DREG(result)
+#define XOR_M(d)    int sreg, dreg, source, dest, result, ea; GET_SREG; source = REGW(sreg); GET_DW_##d; CLR_NZV; result = dest ^ source; SETW_NZ; SET_CPSW(PSW,0); PUT_DW_EA(result)
+
+/* Extended Instruction Set -- SIMH impl */
+
+int t11_device::_mul(int src, int src2, int *psw) {
+	int dst;
+	int N, Z, V, C;
+
+	if (GET_SIGN_W (src2))
+		src2 = src2 | ~077777;
+	if (GET_SIGN_W (src))
+		src = src | ~077777;
+	dst = src * src2;
+	N = (dst < 0);
+	Z = GET_ZERO (dst);
+	V = 0;
+	C = ((dst > 077777) || (dst < -0100000));
+	*psw = (*psw & ~15) | ((N&1) << 3) | ((Z&1) << 2) | ((V&1) << 1) | (C&1);
+
+	return dst;
+}
+
+#define MUL_M(s)    \
+int sreg, dreg, source, dest, result, ea = 0, _psw = PSW; \
+EIS_SWAP; GET_SW_##s; GET_DW_RG; \
+result = _mul(dest, source, &_psw); SET_CPSW((PSW & ~15) | (_psw & 15),0); \
+PUT_DW_DREG(result >> 16); REGW(dreg|1) = result
+
+#define MUL_R(s)    \
+int sreg, dreg, source, dest, result, _psw = PSW; \
+EIS_SWAP; GET_SW_##s; GET_DW_RG; \
+result = _mul(dest, source, &_psw); SET_CPSW((PSW & ~15) | (_psw & 15),0); \
+PUT_DW_DREG(result >> 16); REGW(dreg|1) = result
+
+int t11_device::_div(int source, int source1, int src2, int *remainder, int *psw) {
+	int src, dst = 0;
+	int N, Z, V, C;
+
+	src = (((UINT32) source) << 16) | source1;
+	if (src2 == 0) {
+		N = 0;                                  /* J11,11/70 compat */
+		Z = V = C = 1;                          /* N = 0, Z = 1 */
+	} else if ((((UINT32)src) == 020000000000) && (src2 == 0177777)) {
+		V = 1;                                  /* J11,11/70 compat */
+		N = Z = C = 0;                          /* N = Z = 0 */
+	} else {
+		if (GET_SIGN_W (src2))
+			src2 = src2 | ~077777;
+		if (GET_SIGN_W (source))
+			src = src | ~017777777777;
+		dst = src / src2;
+		N = (dst < 0);                              /* N set on 32b result */
+		if ((dst > 077777) || (dst < -0100000)) {
+			V = 1;                                  /* J11,11/70 compat */
+			Z = C = 0;                              /* Z = C = 0 */
+		} else {
+			Z = GET_ZERO (dst);
+			V = C = 0;
+		}
+		*remainder = (src - (src2 * dst)) & 0177777;
+	}
+	*psw = (*psw & ~15) | ((N&1) << 3) | ((Z&1) << 2) | ((V&1) << 1) | (C&1);
+	return dst;
+}
+
+#define DIV_M(s)    \
+int sreg, dreg, source, dest, result, remainder = 0, ea = 0, _psw = PSW; \
+EIS_SWAP; GET_SW_##s; GET_DW_RG; \
+result = _div(dest, REGD(dreg|1), source, &remainder, &_psw); SET_CPSW((PSW & ~15) | (_psw & 15),0); \
+if (!(PSW & VFLAG)) { PUT_DW_DREG(result); REGW((dreg|1)) = remainder; }
+
+#define DIV_R(s)    \
+int sreg, dreg, source, dest, result, remainder = 0, _psw = PSW; \
+EIS_SWAP; GET_SW_##s; GET_DW_RG; \
+result = _div(dest, REGD(dreg|1), source, &remainder, &_psw); SET_CPSW((PSW & ~15) | (_psw & 15),0); \
+if (!(PSW & VFLAG)) { PUT_DW_DREG(result); REGW((dreg|1)) = remainder; }
+
+int t11_device::_ash(int source, int dest, int *psw) {
+	int src, src2, dst, sign, i;
+	int N, Z, V, C;
+
+	N = BIT(*psw, 3);
+	Z = BIT(*psw, 2);
+	V = BIT(*psw, 1);
+	C = BIT(*psw, 0);
+
+	src2 = dest & 077;
+	sign = GET_SIGN_W (source);
+	src = sign? source | ~077777: source;
+	if (src2 == 0) {                            /* [0] */
+		dst = src;
+		V = C = 0;
+		}
+	else if (src2 <= 15) {                      /* [1,15] */
+		dst = src << src2;
+		i = (src >> (16 - src2)) & 0177777;
+		V = (i != ((dst & 0100000)? 0177777: 0));
+		C = (i & 1);
+		}
+	else if (src2 <= 31) {                      /* [16,31] */
+		dst = 0;
+		V = (src != 0);
+		C = (src << (src2 - 16)) & 1;
+		}
+	else if (src2 == 32) {                      /* [32] = -32 */
+		dst = -sign;
+		V = 0;
+		C = sign;
+		}
+	else {                                      /* [33,63] = -31,-1 */
+		dst = (src >> (64 - src2)) | (-sign << (src2 - 32));
+		V = 0;
+		C = ((src >> (63 - src2)) & 1);
+		}
+	N = GET_SIGN_W (dst);
+	Z = GET_ZERO (dst);
+	*psw = (*psw & ~15) | ((N&1) << 3) | ((Z&1) << 2) | ((V&1) << 1) | (C&1);
+	return dst & 0177777;
+}
+
+#define ASH_M(s)    \
+int sreg, dreg, source, dest, result, _psw = PSW, ea = 0; \
+EIS_SWAP; GET_SW_##s; GET_DW_RG; \
+result = _ash(dest, source, &_psw); SET_CPSW((PSW & ~15) | (_psw & 15),0); \
+PUT_DW_DREG(result)
+
+#define ASH_R(s)    \
+int sreg, dreg, source, dest, result, _psw = PSW; \
+EIS_SWAP; GET_SW_##s; GET_DW_RG; \
+result = _ash(dest, source, &_psw); SET_CPSW((PSW & ~15) | (_psw & 15),0); \
+PUT_DW_DREG(result)
+
+int t11_device::_ashc(int source, int source1, int dest, int *psw) {
+	int src, src2, dst, sign, i;
+	int N, Z, V, C;
+
+	N = BIT(*psw, 3);
+	Z = BIT(*psw, 2);
+	V = BIT(*psw, 1);
+	C = BIT(*psw, 0);
+
+	src2 = dest & 077;
+	sign = GET_SIGN_W (source);
+
+	src = (((UINT32) source) << 16) | source1;
+	if (src2 == 0) {                            /* [0] */
+		dst = src;
+		V = C = 0;
+		}
+	else if (src2 <= 31) {                      /* [1,31] */
+		dst = ((UINT32) src) << src2;
+		i = (src >> (32 - src2)) | (-sign << src2);
+		V = (i != ((dst & 020000000000)? -1: 0));
+		C = (i & 1);
+		}
+	else if (src2 == 32) {                      /* [32] = -32 */
+		dst = -sign;
+		V = 0;
+		C = sign;
+		}
+	else {                                      /* [33,63] = -31,-1 */
+		dst = (src >> (64 - src2)) | (-sign << (src2 - 32));
+		V = 0;
+		C = ((src >> (63 - src2)) & 1);
+		}
+	i = (dst >> 16) & 0177777;
+	N = GET_SIGN_W (i);
+	Z = GET_ZERO (dst | i);
+	*psw = (*psw & ~15) | ((N&1) << 3) | ((Z&1) << 2) | ((V&1) << 1) | (C&1);
+	return dst;
+}
+
+#define ASHC_M(s)    \
+int sreg, dreg, source, dest, result, ea = 0, _psw = PSW; \
+EIS_SWAP; GET_SW_##s; GET_DW_RG; \
+result = _ashc(dest, REGD(dreg|1), source, &_psw); SET_CPSW((PSW & ~15) | (_psw & 15),0); \
+PUT_DW_DREG(result >> 16); REGW(dreg|1) = result
+
+#define ASHC_R(s)    \
+int sreg, dreg, source, dest, result, _psw = PSW; \
+EIS_SWAP; GET_SW_##s; GET_DW_RG; \
+result = _ashc(dest, REGD(dreg|1), source, &_psw); SET_CPSW((PSW & ~15) | (_psw & 15),0); \
+PUT_DW_DREG(result >> 16); REGW(dreg|1) = result
 
 
+void t11_device::_trap(int vec, int halt, int check_irqs)
+{
+//	logerror("VM2: TRAP to %03o, %s mode, PC %06o (%06o), PSW %06o (%06o), irqs %04x\n", 
+//		vec, halt?"HALT":"USER", PC, CPC, PSW, CPSW, m_irq_state);
+	m_icount -= 48;
+	m_bankswitch_func(halt);
+	if (halt) {
+		CPSW = PSW; CPC = PC;
+		PC = RWORD((c_initial_mode & 0xff00) + vec);
+		PSW = RWORD((c_initial_mode & 0xff00) + vec + 2);
+	} else {
+		PUSH(CPSW); IF_BUSERR(return);
+		PUSH(CPC); IF_BUSERR(return);
+		SET_CPC(RWORD(vec));
+		SET_CPSW(RWORD(vec + 2) & ~HFLAG,1);
+	}
+	m_bankswitch_func(BIT(PSW, 8));
+	if (check_irqs) t11_check_irqs();
+}
 
 void t11_device::op_0000(UINT16 op)
 {
+UINT16 val;
+
 	switch (op & 0x3f)
 	{
 		case 0x00:  /* HALT  */ halt(op); break;
 		case 0x01:  /* WAIT  */ m_icount = 0; m_wait_state = 1; break;
-		case 0x02:  /* RTI   */ m_icount -= 24; PC = POP(); PSW = POP(); t11_check_irqs(); break;
-		case 0x03:  /* BPT   */ m_icount -= 48; PUSH(PSW); PUSH(PC); PC = RWORD(0x0c); PSW = RWORD(0x0e); t11_check_irqs(); break;
-		case 0x04:  /* IOT   */ m_icount -= 48; PUSH(PSW); PUSH(PC); PC = RWORD(0x10); PSW = RWORD(0x12); t11_check_irqs(); break;
-		case 0x05:  /* RESET */ m_out_reset_func(ASSERT_LINE); m_out_reset_func(CLEAR_LINE); m_icount -= 110; break;
-		case 0x06:  /* RTT   */ m_icount -= 33; PC = POP(); PSW = POP(); t11_check_irqs(); break;
+		case 0x02:  /* RTI   */ 
+			m_icount -= 24; 
+			SET_CPC(POP());
+			if (PC >= 0160000) SET_CPSW(POP(),1); else SET_CPSW((PSW & HFLAG) | (POP() & ~HFLAG),1);
+//			logerror("VM2: RTI to %06o (%06o), %06o (%06o)\n", PC, CPC, PSW, CPSW);
+			m_bankswitch_func(BIT(PSW, 8)); t11_check_irqs(); break;
+		case 0x03:  /* BPT   */ 
+			_trap(T11_BPT, 0, 1); break;
+		case 0x04:  /* IOT   */ 
+			_trap(T11_IOT, 0, 1); break;
+		case 0x05:  /* RESET */
+			m_icount -= 110;
+			m_evnt_state = FALSE;
+			if (daisy_chain_present())
+				z80_daisy_chain_interface::interface_post_reset();
+			break;
+		case 0x06:  /* RTT   XXX suppress interrupts */
+			m_icount -= 33; 
+			val = PSW & TFLAG;
+			SET_CPC(POP());
+			if (PC >= 0160000) SET_CPSW(POP(),1); else SET_CPSW((PSW & HFLAG) | (POP() & ~HFLAG),1);
+//			logerror("VM2: RTT to %06o (%06o), %06o (%06o)\n", PC, CPC, PSW, CPSW);
+			m_bankswitch_func(BIT(PSW, 8)); 
+			/* don't process interrupts if T-bit has been just set */
+			if ((PSW & TFLAG) <= val) t11_check_irqs(); 
+			break;
+#if 0
+		case 0x07:	/* MFPT	*/
+			REGB(0) = 4; break;
+#endif
 		default:    illegal(op); break;
 	}
+}
+
+void t11_device::op_0001(UINT16 op)
+{
+	if (!BIT(PSW, 8)) {
+		illegal(op);
+		return;
+	}
+	switch (op & 0x3f)
+	{
+		case 010:   /* START */ 
+		case 011: case 012: case 013:
+			m_icount -= 24; PC = CPC; PSW = CPSW; m_bankswitch_func(BIT(PSW, 8)); t11_check_irqs(); break;
+		case 014:   /* STEP  */
+		case 015: case 016: case 017:
+			m_icount -= 24; PC = CPC; PSW = CPSW; m_bankswitch_func(BIT(PSW, 8)); break;
+		default:    illegal(op); break;
+	}
+}
+
+void t11_device::op_0002(UINT16 op)
+{
+	if (!BIT(PSW, 8)) {
+		illegal(op);
+		return;
+	}
+	switch (op & 0x3f)
+	{
+		case 020:   /* RSEL  */ m_icount -= 24; REGW(0) = c_initial_mode; break;
+		case 021:   /* MFUS  */ 
+			m_icount -= 24; m_bankswitch_func(0); REGW(0) = RWORD(REGW(5)); REGW(5) += 2; m_bankswitch_func(1); IF_BUSERR(return);
+			break;
+		case 022:   /* RCPC  */ 
+		case 023:
+			m_icount -= 24; REGW(0) = CPC; break;
+		case 024:   /* RCPS  */
+		case 025: case 026: case 027:
+			m_icount -= 24; REGW(0) = CPSW; break;
+		default:    illegal(op); break;
+	}
+}
+
+void t11_device::op_0003(UINT16 op)
+{
+	if (!BIT(PSW, 8)) {
+		illegal(op);
+		return;
+	}
+	switch (op & 0x3f)
+	{
+		case 031:   /* MTUS  */ 
+			m_icount -= 24; m_bankswitch_func(0); REGW(5) -= 2; WWORD(REGW(5), REGW(0)); m_bankswitch_func(1); IF_BUSERR(return); 
+			break;
+		case 032:   /* WCPC  */
+		case 033:
+			m_icount -= 24; CPC = REGW(0); break;
+		case 034:   /* WCPS  */
+		case 035: case 036: case 037:
+			m_icount -= 24; CPSW = REGW(0); break;
+		default:    illegal(op); break;
+	}
+}
+
+// FIS instructions
+void t11_device::op_7a00(UINT16 op)
+{
+	if (BIT(c_initial_mode, 7)) {
+		illegal(op);
+	} else {
+		_trap(T11_ILLINST, 1, 0);
+	}
+}
+
+/* Trap to 4 */
+void t11_device::bus_error(UINT16 op)
+{
+	int saved = m_bus_error;
+
+//	logerror("VM2: bus error (%d) in %s mode (process)\n", saved, BIT(PSW,8)?"HALT":"USER");
+
+	/* Double trap? */
+	if (saved>1) {
+		_trap(0174, 1, 0);
+	} else {
+		if (BIT(PSW, 8)) {
+			_trap(T11_TIMEOUT, 1, 0);
+		} else {
+			PUSH(PSW); if (m_bus_error>saved) { bus_error(0); return; }
+			PUSH(PC); if (m_bus_error>saved) { bus_error(0); return; }
+			SET_CPC(RWORD(T11_TIMEOUT));
+			SET_CPSW(RWORD(T11_TIMEOUT+2),1);
+		}
+	}
+	m_bus_error = 0;
 }
 
 void t11_device::halt(UINT16 op)
 {
 	m_icount -= 48;
-	PUSH(PSW);
-	PUSH(PC);
-	PC = RWORD(0x04);
-	PSW = RWORD(0x06);
-	t11_check_irqs();
+	if (BIT(PSW, 8)) return;
+	_trap(0170, 1, 1);
 }
 
+/* Trap to 4 -- JMP reg or JSR reg */
+void t11_device::illegal4(UINT16 op)
+{
+	return _trap(T11_TIMEOUT, 0, 1);
+}
+
+/* Trap to 10 */
 void t11_device::illegal(UINT16 op)
 {
-	m_icount -= 48;
-	PUSH(PSW);
-	PUSH(PC);
-	PC = RWORD(0x08);
-	PSW = RWORD(0x0a);
-	t11_check_irqs();
+	return _trap(T11_ILLINST, 0, 1);
 }
 
 void t11_device::mark(UINT16 op)
@@ -291,7 +623,7 @@ void t11_device::mark(UINT16 op)
 	m_icount -= 36;
 
 	SP = PC + 2 * (op & 0x3f);
-	PC = REGW(5);
+	SET_CPC(REGW(5));
 	REGW(5) = POP();
 }
 
@@ -303,17 +635,20 @@ void t11_device::jmp_ded(UINT16 op)       { m_icount -= 21; { JMP(DED); } }
 void t11_device::jmp_ix(UINT16 op)        { m_icount -= 21; { JMP(IX);  } }
 void t11_device::jmp_ixd(UINT16 op)       { m_icount -= 27; { JMP(IXD); } }
 
+/* XXX RTS PC */
 void t11_device::rts(UINT16 op)
 {
 	int dreg;
 	m_icount -= 21;
 	GET_DREG;
-	PC = REGD(dreg);
+	SET_CPC(REGD(dreg));
 	REGW(dreg) = POP();
+	SET_CPC(PC);
+//	logerror("VM2: RTS to %06o (%06o), %06o (%06o)\n", PC, CPC, PSW, CPSW);
 }
 
-void t11_device::ccc(UINT16 op)         { m_icount -= 18; { PSW &= ~(op & 15); } }
-void t11_device::scc(UINT16 op)         { m_icount -= 18; { PSW |=  (op & 15); } }
+void t11_device::ccc(UINT16 op)         { m_icount -= 18; { PSW &= ~(op & 15); SET_CPSW(PSW,0); } }
+void t11_device::scc(UINT16 op)         { m_icount -= 18; { PSW |=  (op & 15); SET_CPSW(PSW,0); } }
 
 void t11_device::swab_rg(UINT16 op)       { m_icount -= 12; { SWAB_R(RG); } }
 void t11_device::swab_rgd(UINT16 op)      { m_icount -= 21; { SWAB_M(RGD); } }
@@ -847,6 +1182,42 @@ void t11_device::add_ixd_ded(UINT16 op)   { m_icount -= 30+21; { ADD_M(IXD,DED);
 void t11_device::add_ixd_ix(UINT16 op)    { m_icount -= 30+21; { ADD_M(IXD,IX);  } }
 void t11_device::add_ixd_ixd(UINT16 op)   { m_icount -= 30+27; { ADD_M(IXD,IXD); } }
 
+void t11_device::ash_rg(UINT16 op)        { m_icount -= 12; { ASH_R(RG);  } }	// XXX icount is fake
+void t11_device::ash_rgd(UINT16 op)       { m_icount -= 21; { ASH_M(RGD); } }
+void t11_device::ash_in(UINT16 op)        { m_icount -= 21; { ASH_M(IN);  } }
+void t11_device::ash_ind(UINT16 op)       { m_icount -= 27; { ASH_M(IND); } }
+void t11_device::ash_de(UINT16 op)        { m_icount -= 24; { ASH_M(DE);  } }
+void t11_device::ash_ded(UINT16 op)       { m_icount -= 30; { ASH_M(DED); } }
+void t11_device::ash_ix(UINT16 op)        { m_icount -= 30; { ASH_M(IX);  } }
+void t11_device::ash_ixd(UINT16 op)       { m_icount -= 36; { ASH_M(IXD); } }
+
+void t11_device::ashc_rg(UINT16 op)       { m_icount -= 12; { ASHC_R(RG);  } }	// XXX icount is fake
+void t11_device::ashc_rgd(UINT16 op)      { m_icount -= 21; { ASHC_M(RGD); } }
+void t11_device::ashc_in(UINT16 op)       { m_icount -= 21; { ASHC_M(IN);  } }
+void t11_device::ashc_ind(UINT16 op)      { m_icount -= 27; { ASHC_M(IND); } }
+void t11_device::ashc_de(UINT16 op)       { m_icount -= 24; { ASHC_M(DE);  } }
+void t11_device::ashc_ded(UINT16 op)      { m_icount -= 30; { ASHC_M(DED); } }
+void t11_device::ashc_ix(UINT16 op)       { m_icount -= 30; { ASHC_M(IX);  } }
+void t11_device::ashc_ixd(UINT16 op)      { m_icount -= 36; { ASHC_M(IXD); } }
+
+void t11_device::mul_rg(UINT16 op)        { m_icount -= 12; { MUL_R(RG);  } }	// XXX icount is fake
+void t11_device::mul_rgd(UINT16 op)       { m_icount -= 21; { MUL_M(RGD); } }
+void t11_device::mul_in(UINT16 op)        { m_icount -= 21; { MUL_M(IN);  } }
+void t11_device::mul_ind(UINT16 op)       { m_icount -= 27; { MUL_M(IND); } }
+void t11_device::mul_de(UINT16 op)        { m_icount -= 24; { MUL_M(DE);  } }
+void t11_device::mul_ded(UINT16 op)       { m_icount -= 30; { MUL_M(DED); } }
+void t11_device::mul_ix(UINT16 op)        { m_icount -= 30; { MUL_M(IX);  } }
+void t11_device::mul_ixd(UINT16 op)       { m_icount -= 36; { MUL_M(IXD); } }
+
+void t11_device::div_rg(UINT16 op)        { m_icount -= 12; { DIV_R(RG);  } }	// XXX icount is fake
+void t11_device::div_rgd(UINT16 op)       { m_icount -= 21; { DIV_M(RGD); } }
+void t11_device::div_in(UINT16 op)        { m_icount -= 21; { DIV_M(IN);  } }
+void t11_device::div_ind(UINT16 op)       { m_icount -= 27; { DIV_M(IND); } }
+void t11_device::div_de(UINT16 op)        { m_icount -= 24; { DIV_M(DE);  } }
+void t11_device::div_ded(UINT16 op)       { m_icount -= 30; { DIV_M(DED); } }
+void t11_device::div_ix(UINT16 op)        { m_icount -= 30; { DIV_M(IX);  } }
+void t11_device::div_ixd(UINT16 op)       { m_icount -= 36; { DIV_M(IXD); } }
+
 void t11_device::xor_rg(UINT16 op)        { m_icount -= 12; { XOR_R(RG);  } }
 void t11_device::xor_rgd(UINT16 op)       { m_icount -= 21; { XOR_M(RGD); } }
 void t11_device::xor_in(UINT16 op)        { m_icount -= 21; { XOR_M(IN);  } }
@@ -864,8 +1235,9 @@ void t11_device::sob(UINT16 op)
 	GET_SREG; source = REGD(sreg);
 	source -= 1;
 	REGW(sreg) = source;
-	if (source)
-		PC -= 2 * (op & 0x3f);
+	if (source) {
+		SET_CPC(PC - (2 * (op & 0x3f)));
+	}
 }
 
 void t11_device::bpl(UINT16 op)           { m_icount -= 12; { BR(!GET_N); } }
@@ -879,22 +1251,12 @@ void t11_device::bcs(UINT16 op)           { m_icount -= 12; { BR( GET_C); } }
 
 void t11_device::emt(UINT16 op)
 {
-	m_icount -= 48;
-	PUSH(PSW);
-	PUSH(PC);
-	PC = RWORD(0x18);
-	PSW = RWORD(0x1a);
-	t11_check_irqs();
+	return _trap(T11_EMT, 0, 1);
 }
 
 void t11_device::trap(UINT16 op)
 {
-	m_icount -= 48;
-	PUSH(PSW);
-	PUSH(PC);
-	PC = RWORD(0x1c);
-	PSW = RWORD(0x1e);
-	t11_check_irqs();
+	return _trap(T11_TRAP, 0, 1);
 }
 
 void t11_device::clrb_rg(UINT16 op)       { m_icount -= 12; { CLRB_R(RG);  } }

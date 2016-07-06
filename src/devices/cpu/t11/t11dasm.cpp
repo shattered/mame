@@ -125,6 +125,21 @@ CPU_DISASSEMBLE( t11 )
 				case 0x04:  sprintf (buffer, "IOT"); break;
 				case 0x05:  sprintf (buffer, "RESET"); break;
 				case 0x06:  sprintf (buffer, "RTT"); break;
+				case 0010: case 011: case 012:
+				case 0013:  sprintf (buffer, "START"); break;
+				case 0014: case 015: case 016:
+				case 0017:  sprintf (buffer, "STEP"); break;
+				case 0020:  sprintf (buffer, "RSEL"); break;
+				case 0021:  sprintf (buffer, "MFUS"); break;
+				case 0022:
+				case 0023:  sprintf (buffer, "RCPC"); break;
+				case 0024: case 0025: case 0026:
+				case 0027:  sprintf (buffer, "RCPS"); break;
+				case 0031:  sprintf (buffer, "MTUS"); break;
+				case 0032:
+				case 0033:  sprintf (buffer, "WCPC"); break;
+				case 0034: case 0035: case 0036:
+				case 0037:  sprintf (buffer, "WCPS"); break;
 				default:    sprintf (buffer, "???? (%06o)", op); break;
 			}
 			break;
@@ -259,9 +274,9 @@ CPU_DISASSEMBLE( t11 )
 			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "ASL   %s", ea1);
 			break;
-/*      case 0x0d00:
+		case 0x0d00:
             sprintf (buffer, "MARK  #$%o", lo);
-            break;*/
+            break;
 		case 0x0dc0:
 			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "SXT   %s", ea1);
@@ -344,17 +359,30 @@ CPU_DISASSEMBLE( t11 )
 			pc = MakeEA (ea2, lo, pc, 6);
 			sprintf (buffer, "ADD   %s,%s", ea1, ea2);
 			break;
-
+		case 0x7000: case 0x7040: case 0x7080: case 0x70c0: case 0x7100: case 0x7140: case 0x7180: case 0x71c0:
+			pc = MakeEA (ea1, lo, pc, 6);
+			sprintf (buffer, "MUL   %s,%s", ea1, regs[hi & 7]);
+			break;
+		case 0x7200: case 0x7240: case 0x7280: case 0x72c0: case 0x7300: case 0x7340: case 0x7380: case 0x73c0:
+			pc = MakeEA (ea1, lo, pc, 6);
+			sprintf (buffer, "DIV   %s,%s", ea1, regs[hi & 7]);
+			break;
+		case 0x7400: case 0x7440: case 0x7480: case 0x74c0: case 0x7500: case 0x7540: case 0x7580: case 0x75c0:
+			pc = MakeEA (ea1, lo, pc, 6);
+			sprintf (buffer, "ASH   %s,%s", ea1, regs[hi & 7]);
+			break;
+		case 0x7600: case 0x7640: case 0x7680: case 0x76c0: case 0x7700: case 0x7740: case 0x7780: case 0x77c0:
+			pc = MakeEA (ea1, lo, pc, 6);
+			sprintf (buffer, "ASHC  %s,%s", ea1, regs[hi & 7]);
+			break;
 		case 0x7800: case 0x7840: case 0x7880: case 0x78c0: case 0x7900: case 0x7940: case 0x7980: case 0x79c0:
 			pc = MakeEA (ea1, lo, pc, 6);
 			sprintf (buffer, "XOR   %s,%s", regs[hi & 7], ea1);
 			break;
-
 		case 0x7e00: case 0x7e40: case 0x7e80: case 0x7ec0: case 0x7f00: case 0x7f40: case 0x7f80: case 0x7fc0:
-			addr = (pc + 2 - 2 * lo) & 0xffff;
+			addr = (pc /* + 2 */ - 2 * lo) & 0xffff;
 			sprintf (buffer, "SOB   %s,$%o", regs[hi & 7], addr);
 			break;
-
 		case 0x8000: case 0x8040: case 0x8080: case 0x80c0:
 			offset = 2 * (INT8)(op & 0xff);
 			sprintf (buffer, "BPL   $%06o", pc + offset);
@@ -393,7 +421,6 @@ CPU_DISASSEMBLE( t11 )
 		case 0x8900: case 0x8940: case 0x8980: case 0x89c0:
 			sprintf (buffer, "TRAP  #$%03o", op & 0xff);
 			break;
-
 		case 0x8a00:
 			pc = MakeEA (ea1, lo, pc, 2);
 			sprintf (buffer, "CLRB  %s", ea1);

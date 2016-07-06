@@ -7,10 +7,17 @@
 #ifndef __T11_H__
 #define __T11_H__
 
+#include "cpu/z80/z80daisy.h"
+
+#define INPUT_LINE_BUSERR       INPUT_LINE_IRQ1
+#define INPUT_LINE_ACLO         INPUT_LINE_IRQ4
+#define INPUT_LINE_1801HALT     INPUT_LINE_IRQ5
+#define INPUT_LINE_EVNT         INPUT_LINE_IRQ6
+#define INPUT_LINE_VIRQ         INPUT_LINE_IRQ7
 
 enum
 {
-	T11_R0=1, T11_R1, T11_R2, T11_R3, T11_R4, T11_R5, T11_SP, T11_PC, T11_PSW
+	T11_R0=1, T11_R1, T11_R2, T11_R3, T11_R4, T11_R5, T11_SP, T11_PC, T11_PSW, T11_CPC, T11_CPSW
 };
 
 #define T11_IRQ0        0      /* IRQ0 */
@@ -18,32 +25,50 @@ enum
 #define T11_IRQ2        2      /* IRQ2 */
 #define T11_IRQ3        3      /* IRQ3 */
 
-#define T11_RESERVED    0x000   /* Reserved vector */
-#define T11_TIMEOUT     0x004   /* Time-out/system error vector */
-#define T11_ILLINST     0x008   /* Illegal and reserved instruction vector */
-#define T11_BPT         0x00C   /* BPT instruction vector */
-#define T11_IOT         0x010   /* IOT instruction vector */
-#define T11_PWRFAIL     0x014   /* Power fail vector */
-#define T11_EMT         0x018   /* EMT instruction vector */
-#define T11_TRAP        0x01C   /* TRAP instruction vector */
+#define T11_RESERVED    0000   /* Reserved vector */
+#define T11_TIMEOUT     0004   /* Time-out/system error vector */
+#define T11_ILLINST     0010   /* Illegal and reserved instruction vector */
+#define T11_BPT         0014   /* BPT instruction vector */
+#define T11_IOT         0020   /* IOT instruction vector */
+#define T11_PWRFAIL     0024   /* Power fail vector */
+#define T11_EMT         0030   /* EMT instruction vector */
+#define T11_TRAP        0034   /* TRAP instruction vector */
+#define T11_EVNT        0100   /* EVNT pin */
 
+#define T11FEAT_BUSERR	0x001	/* supports bus errors */
+
+#define IF_BUSERR(x)	if (m_bus_error) { bus_error(0); x; }
 
 #define MCFG_T11_INITIAL_MODE(_mode) \
 	t11_device::set_initial_mode(*device, _mode);
+#define MCFG_T11_FEATURES(_features) \
+	t11_device::set_features(*device, _features);
 
 #define MCFG_T11_RESET(_devcb) \
 	t11_device::set_out_reset_func(*device, DEVCB_##_devcb);
+#define MCFG_K1801VM2_BANKSWITCH_CB(_devcb) \
+	devcb = &t11_device::static_set_bankswitch_cb(*device, DEVCB_##_devcb);
+#define MCFG_K1801VM2_BUSERROR_CB(_devcb) \
+	devcb = &t11_device::static_set_buserror_cb(*device, DEVCB_##_devcb);
+#define MCFG_K1801VM2_BUSERROR_RESET_CB(_devcb) \
+	devcb = &t11_device::static_set_buserror_reset_cb(*device, DEVCB_##_devcb);
+#define MCFG_K1801VM2_DIPSWITCH_CB(_devcb) \
+	devcb = &k1801vm2_device::static_set_dipswitch_cb(*device, DEVCB_##_devcb);
 
-class t11_device :  public cpu_device
+
+class t11_device :  public cpu_device, public z80_daisy_chain_interface
 {
 public:
 	// construction/destruction
 	t11_device(const machine_config &mconfig, const char *_tag, device_t *_owner, UINT32 _clock);
 	t11_device(const machine_config &mconfig, device_type type, const char *name, const char *tag, device_t *owner, UINT32 clock, const char *shortname, const char *source);
 
+	template<class _Object> static devcb_base & static_set_bankswitch_cb(device_t &device, _Object object) { return downcast<t11_device &>(device).m_bankswitch_func.set_callback(object); }
+
 	// static configuration helpers
 	static void set_initial_mode(device_t &device, const UINT16 mode) { downcast<t11_device &>(device).c_initial_mode = mode; }
 	template<class _Object> static devcb_base &set_out_reset_func(device_t &device, _Object object) { return downcast<t11_device &>(device).m_out_reset_func.set_callback(object); }
+	static void set_features(device_t &device, const UINT16 features) { downcast<t11_device &>(device).c_features = features; }
 
 protected:
 	// device-level overrides
@@ -73,26 +98,34 @@ protected:
 	address_space_config m_program_config;
 
 	UINT16 c_initial_mode;
+	UINT16 c_features;
+	devcb_write16 m_bankswitch_func;
 
 	PAIR                m_ppc;    /* previous program counter */
 	PAIR                m_reg[8];
 	PAIR                m_psw;
+	PAIR                m_cpc;    /* copy of program counter */
+	PAIR                m_cpsw;   /* copy of psw register */
 	UINT16              m_initial_pc;
 	UINT8               m_wait_state;
-	UINT8               m_irq_state;
+	bool                m_evnt_state;
+	UINT16              m_irq_state;
 	int                 m_icount;
+	int                 m_bus_error;
 	address_space *m_program;
 	direct_read_data *m_direct;
 	devcb_write_line   m_out_reset_func;
+	bool m_disabled;
 
-	inline int ROPCODE();
+	inline int ROPCODE(int how);
 	inline int RBYTE(int addr);
 	inline void WBYTE(int addr, int data);
 	inline int RWORD(int addr);
 	inline void WWORD(int addr, int data);
 	inline void PUSH(int val);
 	inline int POP();
-	void t11_check_irqs();
+	virtual void t11_check_irqs();
+	void bus_error(UINT16 op);
 
 	typedef void ( t11_device::*opcode_func )(UINT16 op);
 	static const opcode_func s_opcode_table[65536 >> 3];
@@ -100,6 +133,7 @@ protected:
 	void op_0000(UINT16 op);
 	void halt(UINT16 op);
 	void illegal(UINT16 op);
+	void illegal4(UINT16 op);
 	void jmp_rgd(UINT16 op);
 	void jmp_in(UINT16 op);
 	void jmp_ind(UINT16 op);
@@ -621,6 +655,38 @@ protected:
 	void add_ixd_ded(UINT16 op);
 	void add_ixd_ix(UINT16 op);
 	void add_ixd_ixd(UINT16 op);
+	void ash_rg(UINT16 op);
+	void ash_rgd(UINT16 op);
+	void ash_in(UINT16 op);
+	void ash_ind(UINT16 op);
+	void ash_de(UINT16 op);
+	void ash_ded(UINT16 op);
+	void ash_ix(UINT16 op);
+	void ash_ixd(UINT16 op);
+	void ashc_rg(UINT16 op);
+	void ashc_rgd(UINT16 op);
+	void ashc_in(UINT16 op);
+	void ashc_ind(UINT16 op);
+	void ashc_de(UINT16 op);
+	void ashc_ded(UINT16 op);
+	void ashc_ix(UINT16 op);
+	void ashc_ixd(UINT16 op);
+	void mul_rg(UINT16 op);
+	void mul_rgd(UINT16 op);
+	void mul_in(UINT16 op);
+	void mul_ind(UINT16 op);
+	void mul_de(UINT16 op);
+	void mul_ded(UINT16 op);
+	void mul_ix(UINT16 op);
+	void mul_ixd(UINT16 op);
+	void div_rg(UINT16 op);
+	void div_rgd(UINT16 op);
+	void div_in(UINT16 op);
+	void div_ind(UINT16 op);
+	void div_de(UINT16 op);
+	void div_ded(UINT16 op);
+	void div_ix(UINT16 op);
+	void div_ixd(UINT16 op);
 	void xor_rg(UINT16 op);
 	void xor_rgd(UINT16 op);
 	void xor_in(UINT16 op);
@@ -1136,6 +1202,21 @@ protected:
 	void sub_ixd_ded(UINT16 op);
 	void sub_ixd_ix(UINT16 op);
 	void sub_ixd_ixd(UINT16 op);
+
+	// SIMH code
+	int _ash(int source, int dest, int *psw);
+	int _ashc(int source, int source1, int dest, int *psw);
+	int _mul(int source, int dest, int *psw);
+	int _div(int source, int source1, int dest, int *remainder, int *psw);
+
+	// traps
+	void _trap(int vec, int halt, int check_irqs);
+
+	// HALT mode
+	void op_0001(UINT16 op);
+	void op_0002(UINT16 op);
+	void op_0003(UINT16 op);
+	void op_7a00(UINT16 op);
 };
 
 class k1801vm2_device : public t11_device
@@ -1144,12 +1225,24 @@ public:
 	// construction/destruction
 	k1801vm2_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock);
 
+	template<class _Object> static devcb_base & static_set_dipswitch_cb(device_t &device, _Object object) { return downcast<k1801vm2_device &>(device).m_dipswitch_func.set_callback(object); }
+
 protected:
 	// device-level overrides
+	virtual void device_start() override;
 	virtual void device_reset() override;
 
 	// device_state_interface overrides
 	virtual void state_string_export(const device_state_entry &entry, std::string &str) const override;
+
+	// device_execute_interface overrides
+	virtual void execute_run() override;
+	virtual void execute_set_input(int inputnum, int state) override;
+
+	virtual void t11_check_irqs() override;
+
+private:
+	devcb_read16 m_dipswitch_func;
 };
 
 
