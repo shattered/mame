@@ -1373,6 +1373,18 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/dl11.h,MACHINES["DL11"] = true
+---------------------------------------------------
+
+if (MACHINES["DL11"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/dl11.cpp",
+		MAME_DIR .. "src/devices/machine/dl11.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/mc2661.h,MACHINES["MC2661"] = true
 ---------------------------------------------------
 
