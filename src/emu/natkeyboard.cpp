@@ -335,6 +335,7 @@ void natural_keyboard::configure(ioport_queue_chars_delegate queue_chars, ioport
 
 void natural_keyboard::post(unicode_char ch)
 {
+#if 0
 	// ignore any \n that are preceded by \r
 	if (m_last_cr && ch == '\n')
 	{
@@ -347,6 +348,7 @@ void natural_keyboard::post(unicode_char ch)
 		ch = '\r';
 	else
 		m_last_cr = (ch == '\r');
+#endif
 
 	// logging
 	if (LOG_NATURAL_KEYBOARD)
