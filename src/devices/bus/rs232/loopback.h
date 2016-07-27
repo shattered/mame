@@ -17,7 +17,11 @@ public:
 	virtual WRITE_LINE_MEMBER( input_dtr ) override;
 
 protected:
+	virtual ioport_constructor device_input_ports() const override;
 	virtual void device_start() override;
+
+private:
+	required_ioport m_flow;
 };
 
 extern const device_type RS232_LOOPBACK;
