@@ -67,7 +67,7 @@ const device_type DL11 = &device_creator<dl11_device>;
 //  MACROS / CONSTANTS
 //**************************************************************************
 
-#define VERBOSE_DBG 1       /* general debug messages */
+#define VERBOSE_DBG 0       /* general debug messages */
 
 #define DBG_LOG(N,M,A) \
 	do { \

@@ -1385,6 +1385,30 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/pc11.h,MACHINES["PC11"] = true
+---------------------------------------------------
+
+if (MACHINES["PC11"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/pc11.cpp",
+		MAME_DIR .. "src/devices/machine/pc11.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/machine/rt11_vhd.h,MACHINES["RT11VHD"] = true
+---------------------------------------------------
+
+if (MACHINES["RT11VHD"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/rt11_vhd.cpp",
+		MAME_DIR .. "src/devices/machine/rt11_vhd.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/mc2661.h,MACHINES["MC2661"] = true
 ---------------------------------------------------
 

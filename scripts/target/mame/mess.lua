@@ -493,6 +493,7 @@ MACHINES["NMC9306"] = true
 MACHINES["NSC810"] = true
 MACHINES["NSCSI"] = true
 MACHINES["OMTI5100"] = true
+MACHINES["PC11"] = true
 MACHINES["PC_FDC"] = true
 MACHINES["PC_LPT"] = true
 MACHINES["PCCARD"] = true
@@ -512,6 +513,7 @@ MACHINES["ROC10937"] = true
 MACHINES["RP5C01"] = true
 MACHINES["RP5C15"] = true
 MACHINES["RP5H01"] = true
+MACHINES["RT11VHD"] = true
 MACHINES["RTC4543"] = true
 MACHINES["RTC65271"] = true
 MACHINES["RTC9701"] = true
@@ -1801,6 +1803,7 @@ files {
 	MAME_DIR .. "src/mame/machine/ms7004.h",
 	MAME_DIR .. "src/mame/drivers/mk85.cpp",
 	MAME_DIR .. "src/mame/drivers/mk90.cpp",
+	MAME_DIR .. "src/mame/drivers/ms1201.cpp",
 }
 
 createMESSProjects(_target, _subtarget, "elektor")

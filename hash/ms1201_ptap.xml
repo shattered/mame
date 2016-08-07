@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<!DOCTYPE softwarelist SYSTEM "softwarelist.dtd">
+<softwarelist name="ms1201_ptap" description="MS-1201 paper tape images">
+
+	<software name="vkaa">
+		<description>LSI-11 Basic Instruction Tests</description>
+		<year>1975</year>
+		<publisher>Digital Equipment Corporation</publisher>
+		<part name="ptap" interface="ms1201_ptap">
+			<dataarea name="ptap" size="10097">
+				<rom name="maindec-11-dvkaa-a-pb.bin" size="10097" sha1="58c57e23a69b2968bad182880a3bc89d7c47618f" crc="1d8008ec" offset="0" />
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="vkab">
+		<description>LSI-11 EIS Instruction Tests</description>
+		<year>1975</year>
+		<publisher>Digital Equipment Corporation</publisher>
+		<part name="ptap" interface="ms1201_ptap">
+			<dataarea name="ptap" size="12219">
+				<rom name="maindec-11-dvkab-a-pb.bin" size="12219" sha1="202e05a1f2ce23bd37ec75a8db3009575b3ecd82" crc="2d8008ec" offset="0" />
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="vkac">
+		<description>LSI-11 FIS Instruction Tests</description>
+		<year>1975</year>
+		<publisher>Digital Equipment Corporation</publisher>
+		<part name="ptap" interface="ms1201_ptap">
+			<dataarea name="ptap" size="9909">
+				<rom name="maindec-11-dvkac-b-pb.bin" size="9909" sha1="24eef1017f11875ba81b86c524ba3069f2ffafef" crc="3d8008ec" offset="0" />
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="vkah">
+		<description>LSI-11 4K System Exerciser</description>
+		<year>1975</year>
+		<publisher>Digital Equipment Corporation</publisher>
+		<part name="ptap" interface="punchtape">
+			<dataarea name="ptap" size="9932">
+				<rom name="maindec-11-dvkah-a-pb.bin" size="9932" sha1="9b79c688ff45571f56856a798da81b85506e6dbf" crc="4d8008ec" offset="0" />
+			</dataarea>
+		</part>
+	</software>
+
+</softwarelist>
