@@ -1397,6 +1397,18 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/dvk_kgd.h,MACHINES["DVK_KGD"] = true
+---------------------------------------------------
+
+if (MACHINES["DL11"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/dvk_kgd.cpp",
+		MAME_DIR .. "src/devices/machine/dvk_kgd.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/rt11_vhd.h,MACHINES["RT11VHD"] = true
 ---------------------------------------------------
 

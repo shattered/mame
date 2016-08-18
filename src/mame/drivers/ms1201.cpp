@@ -52,6 +52,7 @@
 #include "machine/bankdev.h"
 #include "machine/clock.h"
 #include "machine/dl11.h"
+#include "machine/dvk_kgd.h"
 #include "machine/pc11.h"
 #include "machine/rt11_vhd.h"
 #include "machine/ram.h"
@@ -132,20 +133,14 @@ INPUT_PORTS_END
 static ADDRESS_MAP_START( ms1201_banked_map, AS_PROGRAM, 16, ms1201_state )
 // USER mode
 	AM_RANGE (0000000, 0157777) AM_RAM
-	AM_RANGE (0160000, 0177167) AM_READWRITE(unmapped1_r, unmapped1_w)
-	AM_RANGE (0177170, 0177173) AM_NOP	// RX11 floppy controller (device DX:)
-	AM_RANGE (0177174, 0177513) AM_READWRITE(unmapped__r, unmapped__w)
-	AM_RANGE (0177514, 0177517) AM_NOP	// LP11 parallel port (device LP:)
-	AM_RANGE (0177520, 0177547) AM_READWRITE(unmapped__r, unmapped__w)
+//	AM_RANGE (0176640, 0176647) AM_DEVREADWRITE("kgd", dvk_kgd_device, read, write)
+	AM_RANGE (0177170, 0177173) AM_NOP	// VP1-033 in RX11 floppy controller mode (device DX:)
+	AM_RANGE (0177514, 0177517) AM_NOP	// VP1-033 in LP11 parallel port mode (device LP:)
 	AM_RANGE (0177550, 0177557) AM_DEVREADWRITE("pc11", pc11_device, read, write)
 	AM_RANGE (0177560, 0177567) AM_DEVREADWRITE("dl11", dl11_device, read, write)
-	AM_RANGE (0177570, 0177717) AM_READWRITE(unmapped2_r, unmapped2_w)
 	AM_RANGE (0177720, 0177723) AM_DEVREADWRITE("vhd", rt11_vhd_image_device, read, write)
-	AM_RANGE (0177724, 0177777) AM_READWRITE(unmapped3_r, unmapped3_w)
 // HALT mode
-	AM_RANGE (0200000, 0337777) AM_READWRITE(unmapped4_r, unmapped4_w)
 	AM_RANGE (0340000, 0357777) AM_ROM	AM_REGION("maincpu", 0)
-	AM_RANGE (0360000, 0367777) AM_READWRITE(unmapped__r, unmapped__w)
 	AM_RANGE (0370000, 0377777) AM_RAM
 ADDRESS_MAP_END
 
@@ -193,6 +188,9 @@ void ms1201_state::machine_start()
 	logerror("MS1201: machine_start()\n");
 
 	m_odt = 0;
+
+	m_bankdev->space(AS_PROGRAM).set_trap_unmap(TRUE);
+	m_bankdev->space(AS_PROGRAM).set_trap_line(INPUT_LINE_BUSERR);
 }
 
 void ms1201_state::machine_reset()
@@ -239,6 +237,8 @@ static MACHINE_CONFIG_START( ms1201, ms1201_state )
 	MCFG_PC11_TXRDY_HANDLER(INPUTLINE("maincpu", INPUT_LINE_VIRQ))
 
 	MCFG_RT11_VHD_ADD("vhd")
+
+//	MCFG_DEVICE_ADD("kgd", DVK_KGD, 0)
 
 //	MCFG_SOFTWARE_LIST_ADD("flop_list","ms1201_flop")
 //	MCFG_SOFTWARE_LIST_ADD("ptap_list","ms1201_ptap")
