@@ -106,7 +106,29 @@ TIMER_DEVICE_CALLBACK_MEMBER(dvk_kgd_device::scanline_callback)
 
 UINT32 dvk_kgd_device::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
-	copybitmap(bitmap, m_tmpbmp, 0, 0, KGD_HORZ_START, KGD_VERT_START, cliprect);
+	switch (m_cr & KGDCR_WR) {
+		// copy ie15 scanline
+		case 0 << 14:
+			bitmap.fill(0);
+			copybitmap(bitmap, *m_bitmap_ie15, 0, 0, IE15_HORZ_START, IE15_VERT_START, cliprect);
+			break;
+
+		// copy empty scanline
+		case 1 << 14:
+			bitmap.fill(0);
+			break;
+
+		// mix
+		case 2 << 14:
+			copybitmap(bitmap, m_tmpbmp, 0, 0, KGD_HORZ_START, KGD_VERT_START, cliprect);
+			copybitmap_trans(bitmap, *m_bitmap_ie15, 0, 0, IE15_HORZ_START, IE15_VERT_START, cliprect, 0);
+			break;
+
+		// draw graphics
+		case 3 << 14:
+			copybitmap(bitmap, m_tmpbmp, 0, 0, KGD_HORZ_START, KGD_VERT_START, cliprect);
+			break;
+	}
 	return 0;
 }
 
@@ -127,7 +149,8 @@ static MACHINE_CONFIG_FRAGMENT( dvk_kgd )
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", kgd)
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
-	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", dvk_kgd_device, scanline_callback, "kgd:screen", 0, 1)
+//	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", dvk_kgd_device, scanline_callback, "kgd:screen", 0, 1)
+	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", dvk_kgd_device, scanline_callback, "rs232:ie15:screen", 0, 1)
 MACHINE_CONFIG_END
 
 
@@ -142,6 +165,8 @@ machine_config_constructor dvk_kgd_device::device_mconfig_additions() const
 
 void dvk_kgd_device::device_start()
 {
+	ie15_device *m_ie15;
+
 	// save state
 	save_item(NAME(m_cr));
 	save_item(NAME(m_dr));
@@ -153,6 +178,15 @@ void dvk_kgd_device::device_start()
 
 	m_tmpclip = rectangle(0, KGD_DISP_HORZ-1, 0, KGD_DISP_VERT-1);
 	m_tmpbmp.allocate(KGD_DISP_HORZ, KGD_DISP_VERT);
+
+	m_offbmp.allocate(KGD_DISP_HORZ, 1);
+	m_offbmp.fill(0);
+
+	m_ie15 = machine().device<ie15_device>("rs232:ie15");
+	logerror("DVK KGD: IE15 %sfound\n", m_ie15 ? "" : "not ");
+	if (m_ie15) {
+		m_bitmap_ie15 = m_ie15->get_bitmap();
+	}
 }
 
 

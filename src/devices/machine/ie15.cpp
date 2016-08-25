@@ -503,7 +503,7 @@ PALETTE_INIT_MEMBER( ie15_device, ie15 )
 	palette.set_pen_color(1, 0x00, 0xc0, 0x00); // green
 }
 
-static MACHINE_CONFIG_FRAGMENT( ie15 )
+static MACHINE_CONFIG_FRAGMENT( ie15core )
 	/* Basic machine hardware */
 	MCFG_CPU_ADD("maincpu", IE15_CPU, XTAL_30_8MHz/10)
 	MCFG_CPU_PROGRAM_MAP(ie15_mem)
@@ -511,7 +511,20 @@ static MACHINE_CONFIG_FRAGMENT( ie15 )
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("scantimer", ie15_device, scanline_callback, attotime::from_hz(50*28*11))
 	MCFG_TIMER_START_DELAY(attotime::from_hz(XTAL_30_8MHz/(2*IE15_HORZ_START)))
 
-	/* Video hardware */
+	MCFG_DEVICE_ADD("keyboard", IE15_KEYBOARD, 0)
+	MCFG_IE15_KEYBOARD_CB(WRITE16(ie15_device, kbd_put))
+
+	MCFG_RS232_PORT_ADD("rs232", default_rs232_devices, "null_modem")
+	MCFG_RS232_RXD_HANDLER(WRITELINE(ie15_device, serial_rx_callback))
+
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("beeper", BEEP, 2400)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_FRAGMENT( ie15 )
+	MCFG_FRAGMENT_ADD(ie15core)
+
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::green)
 	MCFG_SCREEN_UPDATE_DRIVER(ie15_device, screen_update)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_30_8MHz/2, IE15_TOTAL_HORZ, IE15_HORZ_START,
@@ -522,17 +535,6 @@ static MACHINE_CONFIG_FRAGMENT( ie15 )
 
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", ie15)
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
-
-	/* Devices */
-	MCFG_DEVICE_ADD("keyboard", IE15_KEYBOARD, 0)
-	MCFG_IE15_KEYBOARD_CB(WRITE16(ie15_device, kbd_put))
-
-	MCFG_RS232_PORT_ADD("rs232", default_rs232_devices, "null_modem")
-	MCFG_RS232_RXD_HANDLER(WRITELINE(ie15_device, serial_rx_callback))
-
-	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("beeper", BEEP, 2400)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 MACHINE_CONFIG_END
 
 ROM_START( ie15 )

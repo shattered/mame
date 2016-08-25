@@ -14,6 +14,7 @@
 #include "emu.h"
 
 #include "includes/pdp11.h"
+#include "machine/ie15.h"
 
 /* registers */
 
@@ -54,12 +55,14 @@ public:
 protected:
 	virtual void device_start() override;
 	virtual void device_reset() override;
-//	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
 private:
 	UINT32 draw_scanline(UINT16 *p, UINT16 offset);
+//	UINT32 mix_scanline(UINT16 *p, UINT16 offset);
 	rectangle m_tmpclip;
 	bitmap_ind16 m_tmpbmp;
+	bitmap_ind16 m_offbmp;
+	bitmap_ind16 *m_bitmap_ie15;
 
 	std::unique_ptr<UINT8[]> m_videoram_base;
 	UINT8 *m_videoram;

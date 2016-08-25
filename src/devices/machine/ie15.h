@@ -36,6 +36,8 @@ public:
 
 	DECLARE_WRITE8_MEMBER(write) { term_write(data); }
 
+	inline bitmap_ind16 *get_bitmap() { return &m_tmpbmp; }
+
 	UINT32 screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
 	virtual machine_config_constructor device_mconfig_additions() const override;
