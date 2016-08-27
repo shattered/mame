@@ -1433,6 +1433,42 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/vp1_120.h,MACHINES["VP1_120"] = true
+---------------------------------------------------
+
+if (MACHINES["VP1_120"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/vp1_120.cpp",
+		MAME_DIR .. "src/devices/machine/vp1_120.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/machine/xm1_031.h,MACHINES["XM1_031"] = true
+---------------------------------------------------
+
+if (MACHINES["XM1_031"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/xm1_031.cpp",
+		MAME_DIR .. "src/devices/machine/xm1_031.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/machine/uknc_ide.h,MACHINES["UKNC_IDE"] = true
+---------------------------------------------------
+
+if (MACHINES["UKNC_IDE"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/uknc_ide.cpp",
+		MAME_DIR .. "src/devices/machine/uknc_ide.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/mc2661.h,MACHINES["MC2661"] = true
 ---------------------------------------------------
 

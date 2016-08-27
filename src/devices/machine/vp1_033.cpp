@@ -175,9 +175,9 @@ WRITE16_MEMBER( vp1_033_device::write )
 	case 0:
 #if 0
         if ((data & CSR_IE) == 0) {
-			M_WRITE_RXRDY(CLEAR_LINE);
+			clear_virq(m_out_virq, 1, 1, channel->rxrdy);
 		} else if ((m_csr & (CSR_DONE + CSR_IE)) == CSR_DONE) {
-			M_WRITE_RXRDY(ASSERT_LINE);
+			raise_virq(m_out_virq, 1, 1, channel->rxrdy);
 		}
 #endif
 		m_csr = ((m_csr & ~PICCSR_WR) | (data & PICCSR_WR));
