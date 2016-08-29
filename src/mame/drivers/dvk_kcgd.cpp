@@ -15,11 +15,20 @@
 	Hardware and ROM variants:
 	- PBA3.660.259TO (1987) does not document mouse interface 
 	- MPSS journal article (1988) does document it
-	- schematic: PBA3.660.259E3 (KCGD_E3-PE3.djvu) has mouse interface
-		and "181" rom in part list, also 4 x 1801VV1 chips 
+	- schematic: PBA3.660.259E3 (KCGD_E3-PE3.djvu) has mouse interface,
+		but "181" rom in part list
 	- rom "181" -- does not use rx interrupts, has no setup menu
 	- rom "182" -- uses? 500 hz timer, rx interrupts, interlace mode
 	- KeyGP supports "save settings" -- to where?
+
+	To do:
+	- debug rom 182 and 182+KeyGP
+	- make KeyGP optional
+	- interlace
+	- scanline table selection
+	- interrupts
+	- mouse
+	- mono/color CRT
 
 ****************************************************************************/
 
@@ -31,6 +40,8 @@
 #include "machine/clock.h"
 #include "machine/dl11.h"
 #include "machine/ms7004.h"
+#include "machine/vp1_033.h"
+
 
 #define KCGD_TOTAL_HORZ 977	// XXX verify
 #define KCGD_DISP_HORZ  800
@@ -49,6 +60,7 @@
 
 #define KCGD_PAGE_0 015574
 #define KCGD_PAGE_1 005574
+
 
 #define VERBOSE_DBG 1       /* general debug messages */
 
@@ -93,21 +105,13 @@ public:
 	};
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 
-	DECLARE_READ16_MEMBER(unmapped_r);
-	DECLARE_WRITE16_MEMBER(unmapped_w);
-
 	DECLARE_READ16_MEMBER(vram_addr_r);
 	DECLARE_READ16_MEMBER(vram_data_r);
 	DECLARE_READ16_MEMBER(vram_mmap_r);
 	DECLARE_WRITE16_MEMBER(vram_addr_w);
 	DECLARE_WRITE16_MEMBER(vram_data_w);
 	DECLARE_WRITE16_MEMBER(vram_mmap_w);
-	DECLARE_READ16_MEMBER(status_r);
-	DECLARE_WRITE16_MEMBER(status_w);
-	DECLARE_READ8_MEMBER(palette_index_r);
-	DECLARE_READ8_MEMBER(palette_data_r);
-	DECLARE_WRITE8_MEMBER(palette_index_w);
-	DECLARE_WRITE8_MEMBER(palette_data_w);
+	DECLARE_WRITE16_MEMBER(palette_control);
 
 	emu_timer *m_vsync_on_timer;
 	emu_timer *m_500hz_timer;
@@ -142,15 +146,10 @@ static ADDRESS_MAP_START( kcgd_banked_map, AS_PROGRAM, 16, kcgd_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE (0000000, 0077777) AM_MIRROR(0200000) AM_READWRITE(vram_mmap_r, vram_mmap_w)
 	AM_RANGE (0100000, 0157777) AM_MIRROR(0200000) AM_ROM AM_REGION("maincpu", 0100000)
-//	AM_RANGE (0120000, 0157777) AM_MIRROR(0200000) AM_READWRITE(unmapped_r, unmapped_w)
 	// 1802VV1 chips
 	AM_RANGE (0160000, 0160001) AM_MIRROR(0203774) AM_READWRITE(vram_addr_r, vram_addr_w)
 	AM_RANGE (0160002, 0160003) AM_MIRROR(0203774) AM_READWRITE(vram_data_r, vram_data_w)
-	// VP1-033 chip in PIC mode
-	AM_RANGE (0167770, 0167771) AM_MIRROR(0200000) AM_READWRITE(status_r, status_w)
-	AM_RANGE (0167772, 0167773) AM_MIRROR(0200000) AM_READWRITE8(palette_index_r, palette_index_w, 0x00ff)
-	AM_RANGE (0167772, 0167773) AM_MIRROR(0200000) AM_READWRITE8(palette_data_r, palette_data_w, 0xff00)
-	AM_RANGE (0167774, 0167775) AM_MIRROR(0200000) AM_UNMAP // AM_READ(mouse_r)
+	AM_RANGE (0167770, 0167775) AM_MIRROR(0200000) AM_DEVREADWRITE("pic", vp1_033_device, read, write)
 	// VP1-065 chips
 	AM_RANGE (0176560, 0176567) AM_MIRROR(0200000) AM_DEVREADWRITE("dl11host", dl11_device, read, write)
 	AM_RANGE (0177560, 0177567) AM_MIRROR(0200000) AM_DEVREADWRITE("dl11kbd", dl11_device, read, write)
@@ -159,25 +158,6 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( kcgd_mem, AS_PROGRAM, 16, kcgd_state )
 	AM_RANGE (0000000, 0177777) AM_DEVREADWRITE("bankdev0", address_map_bank_device, read16, write16)
 ADDRESS_MAP_END
-
-WRITE16_MEMBER(kcgd_state::unmapped_w)
-{
-	address_space &main = m_maincpu->space(AS_PROGRAM);
-	if(!main.debugger_access()) {
-		DBG_LOG(1,"unmapped W", ("?? %06o <- %06o\n", offset<<1, data));
-		m_maincpu->execute_set_input(INPUT_LINE_BUSERR, ASSERT_LINE);
-	}
-}
-
-READ16_MEMBER(kcgd_state::unmapped_r)
-{
-	address_space &main = m_maincpu->space(AS_PROGRAM);
-	if(!main.debugger_access()) {
-		DBG_LOG(1,"unmapped R", ("?? %06o\n", offset<<1));
-		m_maincpu->execute_set_input(INPUT_LINE_BUSERR, ASSERT_LINE);
-	}
-	return 0xffff;
-}
 
 void kcgd_state::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
 {
@@ -194,7 +174,7 @@ void kcgd_state::device_timer(emu_timer &timer, device_timer_id id, int param, v
 
 static const z80_daisy_config kcgd_daisy_chain[] =
 {
-//	{ "pic" },
+	{ "pic" },
 	{ "dl11kbd" },
 	{ "dl11host" },
 	{ nullptr }
@@ -207,6 +187,9 @@ void kcgd_state::machine_start()
 	m_bios = m_maincpu->space(AS_PROGRAM).read_word(0100000) == 0x934e ? 181 : 182;
 
 	logerror("KCGD: machine_start(), BIOS %d\n", m_bios);
+
+	m_bankdev->space(AS_PROGRAM).set_trap_unmap(TRUE);
+	m_bankdev->space(AS_PROGRAM).set_trap_line(INPUT_LINE_BUSERR);
 }
 
 void kcgd_state::machine_reset()
@@ -262,8 +245,8 @@ WRITE16_MEMBER(kcgd_state::vram_data_w)
 {
 	DBG_LOG(2,"VRAM W2", ("%06o <- %d %06o & %06o%s\n", 
 		m_video.vram_addr<<1, BIT(m_video.control, 7), data, mem_mask, mem_mask==0xffff?"":" WARNING"));
-	m_videoram[m_video.vram_addr] &= ~mem_mask;
-	m_videoram[m_video.vram_addr] |= (data & mem_mask);
+	COMBINE_DATA(&m_videoram[m_video.vram_addr]); 
+	m_videoram[m_video.vram_addr] &= ~(1 << 16);
 	m_videoram[m_video.vram_addr] |= (BIT(m_video.control, 7) << 16);
 }
 
@@ -279,8 +262,8 @@ WRITE16_MEMBER(kcgd_state::vram_mmap_w)
 {
 	DBG_LOG(3,"VRAM W1", ("%06o <- %d %06o & %06o%s\n", 
 		offset<<1, BIT(m_video.control, 7), data, mem_mask, mem_mask==0xffff?"":" WARNING"));
-	m_videoram[offset] &= ~mem_mask;
-	m_videoram[offset] |= (data & mem_mask);
+	COMBINE_DATA(&m_videoram[offset]);
+	m_videoram[offset] &= ~(1 << 16);
 	m_videoram[offset] |= (BIT(m_video.control, 7) << 16);
 }
 
@@ -302,21 +285,7 @@ READ16_MEMBER(kcgd_state::vram_mmap_r)
  *  15	R	REQB	500 Hz timer flipflop state
  *
  * RESET signal clears bits 0, 1, 5 and 6.
- */
-WRITE16_MEMBER(kcgd_state::status_w)
-{
-	DBG_LOG(1,"Status W", ("data %04XH (useful %02XH) & %04XH%s\n", data, data & 0x63, mem_mask, mem_mask==0xffff?"":" WARNING"));
-	m_video.status = (m_video.status & 0x8080) | (data & 0x7f7f);
-}
-
-READ16_MEMBER(kcgd_state::status_r)
-{
-	UINT16 data = m_video.status ^ (BIT(m_video.control, 6) << 7);
-	DBG_LOG(1,"Status R", ("data %04X", data));
-	return data;
-}
-
-/*
+ *
  *	167772:
  *
  *	2	W	mouse coordinate
@@ -325,33 +294,21 @@ READ16_MEMBER(kcgd_state::status_r)
  *	7	W	hires mode on writes to vram (0 = hires)
  *
  */
-WRITE8_MEMBER(kcgd_state::palette_index_w)
+WRITE16_MEMBER(kcgd_state::palette_control)
 {
-	m_video.control = data;
-	m_video.palette_index = ((data >> 2) & 15);
-	DBG_LOG(2,"Palette index, Control W", ("data %02XH index %d\n", data, m_video.palette_index));
-}
-
-// 167772
-WRITE8_MEMBER(kcgd_state::palette_data_w)
-{
-	DBG_LOG(2,"Palette data W", ("data %02XH index %d\n", data, m_video.palette_index));
-	m_video.palette[m_video.palette_index] = data;
-	m_palette->set_pen_color(m_video.palette_index,
-		85*(data & 3), 85*((data >> 2) & 3), 85*((data >> 4) & 3));
-}
-
-// 167771
-READ8_MEMBER(kcgd_state::palette_index_r)
-{
-	return 0;
-}
-
-// 167772
-READ8_MEMBER(kcgd_state::palette_data_r)
-{
-	DBG_LOG(2,"Palette data R", ("index %d\n", m_video.palette_index));
-	return m_video.palette[m_video.palette_index];
+	if (mem_mask & 0xff) {
+		m_video.control = data;
+		m_video.palette_index = (data >> 2) & 15;
+		DBG_LOG(1,"Palette/Control W", ("data %06o & %06o = index %d control 0x%x\n", 
+			data, mem_mask, m_video.palette_index, m_video.control));
+	} 
+	if (mem_mask & 0xff00) {
+		m_video.palette[m_video.palette_index] = data >> 8;
+		m_palette->set_pen_color(m_video.palette_index,
+			85*((data >> 8) & 3), 85*((data >> 10) & 3), 85*((data >> 12) & 3));
+		DBG_LOG(1,"Palette/Control W", ("data %06o & %06o = value 0x%x\n", 
+			data, mem_mask, m_video.palette[m_video.palette_index]));
+	}
 }
 
 /*
@@ -462,7 +419,12 @@ static MACHINE_CONFIG_START( kcgd, kcgd_state )
 
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", kcgd)
 
-	// MCFG_DEVICE_ADD("pic", VP1_033, 0)
+	MCFG_DEVICE_ADD("pic", VP1_033, 0)
+	MCFG_VP1_033_VEC_A(0300)
+	MCFG_VP1_033_VEC_B(0304)
+	MCFG_VP1_033_PIC_OUT_HANDLER(WRITE16(kcgd_state, palette_control))
+//	MCFG_VP1_033_PIC_CSR0_HANDLER(XXX)
+//	MCFG_VP1_033_PIC_CSR1_HANDLER(XXX)
 
 	// serial connection to host
 	MCFG_DEVICE_ADD("dl11host", DL11, XTAL_4_608MHz)

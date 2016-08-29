@@ -596,6 +596,7 @@ MACHINES["SCNXX562"] = true
 MACHINES["FGA002"] = true
 MACHINES["INPUT_MERGER"] = true
 MACHINES["IE15"] = true
+MACHINES["VP1_033"] = true
 
 --------------------------------------------------
 -- specify available bus cores
