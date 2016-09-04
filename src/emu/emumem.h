@@ -294,6 +294,10 @@ public:
 	void set_debugger_access(bool debugger) { m_debugger_access = debugger; }
 	bool log_unmap() const { return m_log_unmap; }
 	void set_log_unmap(bool log) { m_log_unmap = log; }
+	bool trap_unmap() const { return m_trap_unmap; }
+	void set_trap_unmap(bool trap) { m_trap_unmap = trap; }
+	int trap_line() { return m_trap_line; }
+	void set_trap_line(int line) { m_trap_line = line; }
 	void dump_map(FILE *file, read_or_write readorwrite);
 
 	// watchpoint enablers
@@ -464,6 +468,8 @@ protected:
 	address_spacenum        m_spacenum;         // address space index
 	bool                    m_debugger_access;  // treat accesses as coming from the debugger
 	bool                    m_log_unmap;        // log unmapped accesses in this space?
+	bool                    m_trap_unmap;       // bus error on unmapped accesses in this space?
+	int                     m_trap_line;		// input line to assert
 	std::unique_ptr<direct_read_data> m_direct;    // fast direct-access read info
 	const char *            m_name;             // friendly name of the address space
 	UINT8                   m_addrchars;        // number of characters to use for physical addresses

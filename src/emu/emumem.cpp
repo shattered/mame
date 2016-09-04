@@ -724,6 +724,12 @@ private:
 					m_space.addrchars(), m_space.byte_to_address(offset * sizeof(_UintType)),
 					2 * sizeof(_UintType), mask);
 		}
+		if (m_space.trap_unmap() && !m_space.debugger_access())
+		{
+			device_execute_interface *executing = m_space.machine().scheduler().currently_executing();
+			cpu_device *cpu = dynamic_cast<cpu_device *>(&executing->device());
+			cpu->execute_set_input(m_space.trap_line(), ASSERT_LINE);
+		}
 		return m_space.unmap();
 	}
 
@@ -795,6 +801,12 @@ private:
 					m_space.addrchars(), m_space.byte_to_address(offset * sizeof(_UintType)),
 					2 * sizeof(_UintType), data,
 					2 * sizeof(_UintType), mask);
+		}
+		if (m_space.trap_unmap() && !m_space.debugger_access())
+		{
+			device_execute_interface *executing = m_space.machine().scheduler().currently_executing();
+			cpu_device *cpu = dynamic_cast<cpu_device *>(&executing->device());
+			cpu->execute_set_input(m_space.trap_line(), ASSERT_LINE);
 		}
 	}
 
