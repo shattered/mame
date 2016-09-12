@@ -15,7 +15,7 @@
 	+ video: graphical cursor
 	. video: verify all color setup incl. cursor
 	- video: cut off 18 scanlines at the top
-	. carts: ROM only, then full devices (RAM disk, IDE controller)
+	+ carts: ROM only, then full devices (RAM disk, IDE controller)
 	. keyboard via xm1_031.cpp + debug stuck input
 	. timer via xm1_031.cpp
 	- "index" line (bit 3 of scsr)

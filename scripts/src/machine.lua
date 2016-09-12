@@ -1409,6 +1409,18 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/vp1_128.h,MACHINES["VP1_128"] = true
+---------------------------------------------------
+
+if (MACHINES["VP1_128"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/vp1_128.cpp",
+		MAME_DIR .. "src/devices/machine/vp1_128.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/xm1_031.h,MACHINES["XM1_031"] = true
 ---------------------------------------------------
 

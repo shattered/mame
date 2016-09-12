@@ -597,6 +597,7 @@ MACHINES["INPUT_MERGER"] = true
 MACHINES["IE15"] = true
 MACHINES["VP1_033"] = true
 MACHINES["VP1_120"] = true
+MACHINES["VP1_128"] = true
 MACHINES["XM1_031"] = true
 
 --------------------------------------------------
