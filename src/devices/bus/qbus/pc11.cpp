@@ -58,7 +58,6 @@ const char* pc11_regnames[] = {
 pc11_device::pc11_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock) :
 	device_t(mconfig, DEC_PC11, "PC11", tag, owner, clock, "pc11", __FILE__),
 	device_image_interface(mconfig, *this),
-	device_z80daisy_interface(mconfig, *this),
 	device_qbus_card_interface(mconfig, *this),
 	m_rxvec(070),
 	m_txvec(074)

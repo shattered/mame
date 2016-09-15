@@ -44,7 +44,6 @@
 
 class pc11_device : public device_t,
 					public device_image_interface,
-					public device_z80daisy_interface,
 					public device_qbus_card_interface
 {
 public:

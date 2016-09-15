@@ -169,7 +169,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(ms1201_state::pclk_timer)
 static const z80_daisy_config ms1201_daisy_chain[] =
 {
 	{ "dl11" },
-//	{ "qbus" },
+	{ "qbus" },
 	{ nullptr }
 };
 

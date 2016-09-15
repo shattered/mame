@@ -118,6 +118,8 @@ from device to next device
 
 #include "emu.h"
 
+#include "includes/pdp11.h"
+
 
 
 //**************************************************************************
@@ -147,13 +149,17 @@ from device to next device
 
 // ======================> qbus_device
 
+class device_qbus_card_interface;
+
 class qbus_device : public device_t,
-					public device_memory_interface
+					public device_memory_interface,
+					public device_z80daisy_interface
 {
 public:
 	// construction/destruction
 	qbus_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock);
 	qbus_device(const machine_config &mconfig, device_type type, const char *name, const char *tag, device_t *owner, UINT32 clock, const char *shortname, const char *source);
+	~qbus_device() { m_device_list.detach_all(); }
 
 	// inline configuration
 	static void static_set_cputag(device_t &device, const char *tag);
@@ -165,6 +171,7 @@ public:
 		return &m_program_config;
 	}
 
+	void add_qbus_card(device_qbus_card_interface *card);
 	void install_device(offs_t start, offs_t end, read16_delegate rhandler, write16_delegate whandler);
 	template<typename T> void install_device(offs_t addrstart, offs_t addrend, T &device, void (T::*map)(class address_map &map, device_t &device), int bits = 16, UINT64 unitmask = U64(0xffffffffffffffff))
 	{
@@ -188,6 +195,11 @@ protected:
 	virtual void device_reset() override;
 	virtual void device_config_complete() override;
 
+	// device_z80daisy_interface overrides
+	virtual int z80daisy_irq_state() override;
+	virtual int z80daisy_irq_ack() override;
+	virtual void z80daisy_irq_reti() override;
+
 	// internal state
 	cpu_device   *m_maincpu;
 
@@ -201,6 +213,7 @@ protected:
 	devcb_write_line    m_out_birq7_cb;
 	devcb_write_line    m_out_bdmr_cb;
 
+	simple_list<device_qbus_card_interface> m_device_list;
 	const char          *m_cputag;
 };
 
@@ -235,6 +248,12 @@ public:
 	device_qbus_card_interface *m_next;
 
 protected:
+	virtual void device_reset() { }
+
+	virtual int z80daisy_irq_state() { return 0; }
+	virtual int z80daisy_irq_ack() { return -1; }
+	virtual void z80daisy_irq_reti() { }
+
 	qbus_slot_device *m_slot;
 };
 
