@@ -28,8 +28,8 @@ const device_type QBUS_SLOT = &device_creator<qbus_slot_device>;
 
 device_qbus_card_interface::device_qbus_card_interface(const machine_config &mconfig, device_t &device)
 	: device_slot_card_interface(mconfig, device)
-//	, device_z80daisy_interface(mconfig, *this)
 {
+	m_ce0_ce3 = 0;
 }
 
 void device_qbus_card_interface::static_set_qbus(device_t &device, device_t *qbus_device)
@@ -79,7 +79,6 @@ void qbus_slot_device::device_start()
 	m_write_birq4.resolve_safe();
 	m_write_bdmr.resolve_safe();
 }
-
 
 //**************************************************************************
 //  GLOBAL VARIABLES
@@ -215,38 +214,43 @@ void qbus_device::z80daisy_irq_reti()
 {
 }
 
+void qbus_device::ce0_ce3_w(int data)
+{
+	device_qbus_card_interface *entry = m_device_list.first();
+
+	while (entry)
+	{
+		entry->ce0_ce3_w(data);
+		entry = entry->next();
+	}
+}
 
 
 void qbus_device::install_space(address_spacenum spacenum, offs_t start, offs_t end, read16_delegate rhandler, write16_delegate whandler)
 {
-	int buswidth;
-	address_space *space;
-
-	if (spacenum == AS_PROGRAM)
-	{
-		space = m_prgspace;
-		buswidth = m_prgwidth;
-	}
-	else
+	if (spacenum != AS_PROGRAM)
 	{
 		fatalerror("Unknown space passed to qbus_device::install_space!\n");
 	}
 
-	switch(buswidth)
+	if (m_prgwidth != 16)
 	{
-		case 16:
-			space->install_readwrite_handler(start, end, rhandler, whandler, 0xffff);
-			break;
-		default:
-			fatalerror("QBUS: Bus width %d not supported\n", buswidth);
+		fatalerror("QBUS: Bus width %d not supported\n", m_prgwidth);
 	}
-}
 
+	m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, 0xffff);
+}
 
 void qbus_device::install_device(offs_t start, offs_t end, read16_delegate rhandler, write16_delegate whandler)
 {
 	install_space(AS_PROGRAM, start, end, rhandler, whandler);
 }
+
+void qbus_device::unmap_rom(offs_t start, offs_t end)
+{
+	m_prgspace->unmap_read(start, end);
+}
+
 
 // interrupt request from Qbus card
 WRITE_LINE_MEMBER( qbus_device::birq4_w ) { m_out_birq4_cb(state); }

@@ -105,12 +105,12 @@ public:
 		, m_subcpu(*this, "subcpu")
 		, m_bankdev0(*this, "bankdev0")
 		, m_bankdev1(*this, "bankdev1")
+		, m_bankdev2(*this, "bankdev2")
 		, m_dl11com(*this, "dl11com")
 		, m_rs232(*this, "rs232")
-		, m_dl11lan(*this, "dl11lan")
-		, m_lan(*this, "lan")
 		, m_cassette(*this, "cassette")
 		, m_centronics(*this, "centronics")
+		, m_subqbus(*this, "subqbus")
 		, m_palette(*this, "palette")
 		, m_screen(*this, "screen")
 	{ }
@@ -192,21 +192,25 @@ protected:
 	required_device<cpu_device> m_subcpu;
 	required_device<address_map_bank_device> m_bankdev0;
 	required_device<address_map_bank_device> m_bankdev1;
+	required_device<address_map_bank_device> m_bankdev2;
 	optional_device<dl11_device> m_dl11com;
 	optional_device<rs232_port_device> m_rs232;
-	optional_device<dl11_device> m_dl11lan;
-	optional_device<rs232_port_device> m_lan;
 	required_device<cassette_image_device> m_cassette;
 	required_device<centronics_device> m_centronics;
+	required_device<qbus_device> m_subqbus;
 	required_device<palette_device> m_palette;
 	required_device<screen_device> m_screen;
 };
 
 
+static ADDRESS_MAP_START( uknc_mem, AS_PROGRAM, 16, uknc_state )
+	AM_RANGE (0000000, 0177777) AM_DEVREADWRITE("bankdev0", address_map_bank_device, read16, write16)
+ADDRESS_MAP_END
+
 static ADDRESS_MAP_START(uknc_mem_banked, AS_PROGRAM, 16, uknc_state)
 // USER mode
 	AM_RANGE (0000000, 0157777) AM_MIRROR(0200000) AM_RAM
-	AM_RANGE (0176560, 0176567) AM_DEVREADWRITE("dl11lan", dl11_device, read, write)	// network
+//	AM_RANGE (0176560, 0176567) AM_DEVREADWRITE("dl11lan", dl11_device, read, write)	// network
 	AM_RANGE (0176570, 0176577) AM_DEVREADWRITE("dl11com", dl11_device, read, write)	// serial port
 	AM_RANGE (0176640, 0176641) AM_READWRITE(maincpu_vram_addr_r, maincpu_vram_addr_w)
 	AM_RANGE (0176642, 0176643) AM_READWRITE(maincpu_vram_data_r, maincpu_vram_data_w)
@@ -222,7 +226,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START(uknc_sub_mem, AS_PROGRAM, 16, uknc_state)
 	AM_RANGE (0000000, 0077777) AM_RAM
 	AM_RANGE (0100000, 0117777) AM_DEVREADWRITE("bankdev1", address_map_bank_device, read16, write16)
-	AM_RANGE (0120000, 0176777) AM_ROM	AM_REGION("subcpu", 020000)
+	AM_RANGE (0120000, 0176777) AM_DEVREADWRITE("bankdev2", address_map_bank_device, read16, write16)
 	AM_RANGE (0177010, 0177011) AM_READWRITE(vram_addr_r, vram_addr_w)
 	AM_RANGE (0177012, 0177013) AM_READWRITE(vram_data_p0_r, vram_data_p0_w)
 	AM_RANGE (0177014, 0177015) AM_READWRITE(vram_data_p12_r, vram_data_p12_w)
@@ -235,13 +239,26 @@ static ADDRESS_MAP_START(uknc_sub_mem, AS_PROGRAM, 16, uknc_state)
 	AM_RANGE (0177716, 0177717) AM_READWRITE(scsr_r, scsr_w)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( uknc_mem, AS_PROGRAM, 16, uknc_state )
-	AM_RANGE (0000000, 0177777) AM_DEVREADWRITE("bankdev0", address_map_bank_device, read16, write16)
-ADDRESS_MAP_END
-
+/*
+ *	0 = value of bit 0 in BCSR 
+ *	  0		mapping at 100000: 0 - read from VRAM plane 0, 1 - read from ROM (reset to 1)
+ *	1 = value of bit 4 in BCSR (ROM banks replacement: 0 - writes ignored, 1 - writes go to VRAM plane 0)
+ *	  4		100000..117777
+ */
 static ADDRESS_MAP_START( uknc_cart_mem, AS_PROGRAM, 16, uknc_state )
-	AM_RANGE (0000000, 0017777) AM_ROM	AM_REGION("subcpu", 0)
+// map 0
+	AM_RANGE (0000000, 0017777) AM_READ_BANK("plane0bank4") //AM_WRITENOP
 
+// map 1 (default) -- read from system ROM, writes ignored
+	AM_RANGE (0100000, 0117777) AM_ROM AM_REGION("subcpu", 0) //AM_WRITENOP
+
+// map 2
+	AM_RANGE (0200000, 0217777) AM_RAMBANK("plane0bank4")
+
+// map 3
+	AM_RANGE (0300000, 0317777) AM_ROM AM_REGION("subcpu", 0) AM_WRITE_BANK("plane0bank4")
+
+#if 0
 	// ide controller hack
 //	AM_RANGE (0020000, 0027777) AM_ROM AM_WRITENOP AM_REGION("cart1", 0)
 //	AM_RANGE (0030000, 0030017) AM_DEVREADWRITE("ide", uknc_ide_device, read, write)
@@ -253,7 +270,46 @@ static ADDRESS_MAP_START( uknc_cart_mem, AS_PROGRAM, 16, uknc_state )
 	AM_RANGE (0140000, 0157777) AM_ROM AM_WRITENOP AM_REGION("cart2", 020000)
 	AM_RANGE (0160000, 0167777) AM_ROM AM_WRITENOP AM_REGION("cart2", 040000)
 	AM_RANGE (0170000, 0170017) AM_DEVREADWRITE("ide", uknc_ide_device, read, write)
+#endif
 ADDRESS_MAP_END
+
+/*
+ *	0-2	= value of bits 5-7 in BCSR (ROM banks replacement: 0 - writes ignored, 1 - writes go to VRAM plane 0)
+ *	  5		120000..137777
+ *	  6		140000..157777
+ *	  7		160000..177777
+ */
+static ADDRESS_MAP_START( uknc_rom_mem, AS_PROGRAM, 16, uknc_state )
+// map 0: all ROM, no VRAM
+	AM_RANGE (0000000, 0057777) AM_ROM AM_REGION("subcpu", 020000)
+// map 1:
+	AM_RANGE (0100000, 0117777) AM_ROM AM_REGION("subcpu", 020000) AM_WRITE_BANK("plane0bank5")
+	AM_RANGE (0120000, 0157777) AM_ROM AM_REGION("subcpu", 040000)
+// map 2:
+	AM_RANGE (0200000, 0217777) AM_ROM AM_REGION("subcpu", 020000)
+	AM_RANGE (0220000, 0237777) AM_ROM AM_REGION("subcpu", 040000) AM_WRITE_BANK("plane0bank6")
+	AM_RANGE (0240000, 0257777) AM_ROM AM_REGION("subcpu", 060000)
+// map 3:
+	AM_RANGE (0300000, 0317777) AM_ROM AM_REGION("subcpu", 020000) AM_WRITE_BANK("plane0bank5")
+	AM_RANGE (0320000, 0337777) AM_ROM AM_REGION("subcpu", 040000) AM_WRITE_BANK("plane0bank6")
+	AM_RANGE (0340000, 0357777) AM_ROM AM_REGION("subcpu", 060000)
+// map 4:
+	AM_RANGE (0100000, 0137777) AM_ROM AM_REGION("subcpu", 020000)
+	AM_RANGE (0140000, 0157777) AM_ROM AM_REGION("subcpu", 060000) AM_WRITE_BANK("plane0bank7")
+// map 5:
+	AM_RANGE (0500000, 0517777) AM_ROM AM_REGION("subcpu", 020000) AM_WRITE_BANK("plane0bank5")
+	AM_RANGE (0520000, 0537777) AM_ROM AM_REGION("subcpu", 040000)
+	AM_RANGE (0540000, 0557777) AM_ROM AM_REGION("subcpu", 060000) AM_WRITE_BANK("plane0bank7")
+// map 6:
+	AM_RANGE (0600000, 0617777) AM_ROM AM_REGION("subcpu", 020000)
+	AM_RANGE (0620000, 0637777) AM_ROM AM_REGION("subcpu", 040000) AM_WRITE_BANK("plane0bank6")
+	AM_RANGE (0640000, 0657777) AM_ROM AM_REGION("subcpu", 060000) AM_WRITE_BANK("plane0bank7")
+// map 7:
+	AM_RANGE (0700000, 0717777) AM_ROM AM_REGION("subcpu", 020000) AM_WRITE_BANK("plane0bank5")
+	AM_RANGE (0720000, 0737777) AM_ROM AM_REGION("subcpu", 040000) AM_WRITE_BANK("plane0bank6")
+	AM_RANGE (0740000, 0757777) AM_ROM AM_REGION("subcpu", 060000) AM_WRITE_BANK("plane0bank7")
+ADDRESS_MAP_END
+
 
 // variants for b/w monitor; inverted Y; and swapped G, B
 static INPUT_PORTS_START( uknc )
@@ -500,7 +556,7 @@ static const z80_daisy_config uknc_daisy_chain[] =
 	{ "channel" },
 //	{ "trap" },
 	{ "dl11com" },
-	{ "dl11lan" },
+	{ "qbus" },
 	{ nullptr }
 };
 
@@ -521,20 +577,26 @@ void uknc_state::machine_start()
 
 	m_bankdev0->space(AS_PROGRAM).set_trap_unmap(TRUE);
 	m_bankdev0->space(AS_PROGRAM).set_trap_line(INPUT_LINE_BUSERR);
+
+	// 3 bitplanes
+	m_videoram = std::make_unique<UINT8[]>(32768*3);
+
+	membank("plane0bank4")->set_base(&m_videoram[0]);
+	membank("plane0bank5")->set_base(&m_videoram[020000]);
+	membank("plane0bank6")->set_base(&m_videoram[040000]);
+	membank("plane0bank7")->set_base(&m_videoram[060000]);
 }
 
 void uknc_state::machine_reset()
 {
 	logerror("UKNC: machine_reset()\n");
 
-	m_bcsr = 01401;
-	m_scsr = 0;
+	bcsr_w(m_bankdev0->space(AS_PROGRAM), 0, 01401);
+	scsr_w(m_bankdev0->space(AS_PROGRAM), 0, 0);
 }
 
 void uknc_state::video_start()
 {
-	// 3 bitplanes
-	m_videoram = std::make_unique<UINT8[]>(32768*3);
 	m_scanlines = std::make_unique<scanline_t[]>(UKNC_DISP_VERT);
 
 	m_tmpbmp.allocate(UKNC_DISP_HORZ, UKNC_DISP_VERT);
@@ -880,22 +942,44 @@ READ16_MEMBER(uknc_state::scsr_r)
 
 /*
  *	0-3	CE0..CE3 bus signals
- *	  CE0	mapping at 100000: 0 - RAM, 1 - ROM (reset to 0)
+ *	  CE0	mapping at 100000: 0 - read from VRAM plane 0, 1 - read from ROM (reset to 1)
  *	  CE1-2	ROM carts: bank selector
  *	  CE3	slot number
- *	4-7	ROM banks replacement
+ *	4-7	ROM banks replacement: 0 - writes ignored, 1 - writes go to VRAM plane 0
+ *	  4		100000..117777
+ *	  5		120000..137777
+ *	  6		140000..157777
+ *	  7		160000..177777
  *	8	line clock interrupt (subcpu): 0 - enable
  *	9	line clock interrupt (maincpu): 0 - enable
  */
 WRITE16_MEMBER(uknc_state::bcsr_w)
 {
-	DBG_LOG(1,"BCSR W", ("<- %06o & %06o%s%s\n", 
-		data, mem_mask, mem_mask==0xffff?"":" WARNING", data&0xf0?" UNIMP":""));
+	int bank1, bank2;
+	address_space *subspace = &m_subcpu->space(AS_PROGRAM);
+
+	bank1 = (data & 1) | ((data >> 3) & 1);
+	bank2 = (data >> 5) & 7;
+
+	DBG_LOG(1,"BCSR W", ("<- %06o & %06o%s (banks %d %d)\n", 
+		data, mem_mask, mem_mask==0xffff?"":" WARNING", bank1, bank2));
+
+	// order matters: device may unmap itself from 'window' region and we restore the mapping
+	m_subqbus->ce0_ce3_w(data & 15);
+
+	if (BIT(m_bcsr ^ data, 0) && BIT(data, 0)) {
+		DBG_LOG(1,"BCSR",("restoring bankdev1 mapping\n"));
+		// restore AM_RANGE (0100000, 0117777) AM_DEVREADWRITE("bankdev1", address_map_bank_device, read16, write16)
+		subspace->unmap_readwrite(0100000, 0117777);
+		subspace->install_readwrite_handler(0100000, 0117777, 
+			read16_delegate(FUNC(address_map_bank_device::read16), subdevice<address_map_bank_device>("bankdev1")),
+			write16_delegate(FUNC(address_map_bank_device::write16), subdevice<address_map_bank_device>("bankdev1")));
+	}
+
+	m_bankdev1->set_bank(bank1);
+	m_bankdev2->set_bank(bank2);
+
 	m_bcsr = data;
-	if (BIT(data, 0))
-		m_bankdev1->set_bank(0);
-	else
-		m_bankdev1->set_bank((data >> 1) & 7);
 }
 
 READ16_MEMBER(uknc_state::bcsr_r)
@@ -930,9 +1014,16 @@ static MACHINE_CONFIG_START( uknc, uknc_state )
 	MCFG_DEVICE_ADD("bankdev1", ADDRESS_MAP_BANK, 0)
 	MCFG_DEVICE_PROGRAM_MAP(uknc_cart_mem)
 	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_BIG)
-	MCFG_ADDRESS_MAP_BANK_ADDRBUS_WIDTH(16)
+	MCFG_ADDRESS_MAP_BANK_ADDRBUS_WIDTH(18)
 	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(16)
-	MCFG_ADDRESS_MAP_BANK_STRIDE(020000)
+	MCFG_ADDRESS_MAP_BANK_STRIDE(0100000)
+
+	MCFG_DEVICE_ADD("bankdev2", ADDRESS_MAP_BANK, 0)
+	MCFG_DEVICE_PROGRAM_MAP(uknc_rom_mem)
+	MCFG_ADDRESS_MAP_BANK_ENDIANNESS(ENDIANNESS_BIG)
+	MCFG_ADDRESS_MAP_BANK_ADDRBUS_WIDTH(18)
+	MCFG_ADDRESS_MAP_BANK_DATABUS_WIDTH(16)
+	MCFG_ADDRESS_MAP_BANK_STRIDE(0100000)
 
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_12_5MHz, 
@@ -952,9 +1043,8 @@ static MACHINE_CONFIG_START( uknc, uknc_state )
 	MCFG_DEVICE_ADD("qbus", QBUS, 0)
 	MCFG_QBUS_CPU(":maincpu")
 	MCFG_QBUS_OUT_BIRQ4_CB(INPUTLINE("maincpu", INPUT_LINE_VIRQ))
-	MCFG_QBUS_SLOT_ADD("qbus", "qbus1", 0, mpi_cards, "vhd")
-	MCFG_QBUS_SLOT_ADD("qbus", "qbus2", 0, mpi_cards, nullptr)
-	MCFG_QBUS_SLOT_ADD("qbus", "qbus3", 0, mpi_cards, nullptr)
+	MCFG_QBUS_SLOT_ADD("qbus", "qbus1", 0, uknc_cards, "vhd")
+	MCFG_QBUS_SLOT_ADD("qbus", "qbus2", 0, uknc_cards, nullptr)
 
 	MCFG_DEVICE_ADD("channel", VP1_120, 0)
 	MCFG_VP1_120_VIRQ_HANDLER(INPUTLINE("maincpu", INPUT_LINE_VIRQ))
@@ -979,7 +1069,7 @@ static MACHINE_CONFIG_START( uknc, uknc_state )
 	MCFG_RS232_PORT_ADD("rs232", default_rs232_devices, "null_modem")
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE("dl11com", dl11_device, rx_w))
 
-#if 1
+#if 0
 	// local area network
 	MCFG_DEVICE_ADD("dl11lan", DL11, XTAL_4_608MHz)
 	MCFG_DL11_RXC(9600)
@@ -998,6 +1088,12 @@ static MACHINE_CONFIG_START( uknc, uknc_state )
 	/*
 	 * devices on the sub cpu
 	 */
+
+	MCFG_DEVICE_ADD("subqbus", QBUS, 0)
+	MCFG_QBUS_CPU(":subcpu")
+	MCFG_QBUS_OUT_BIRQ4_CB(INPUTLINE("subcpu", INPUT_LINE_VIRQ))
+	MCFG_QBUS_SLOT_ADD("subqbus", "cart1", 0, uknc_carts, nullptr)
+	MCFG_QBUS_SLOT_ADD("subqbus", "cart2", 0, uknc_carts, nullptr)
 
 	MCFG_DEVICE_ADD("subchan", VP1_120_SUB, 0)
 	MCFG_VP1_120_SUB_VIRQ_HANDLER(INPUTLINE("subcpu", INPUT_LINE_VIRQ))
@@ -1040,8 +1136,6 @@ MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( uknc )
-	ROM_REGION16_LE(0100000, "maincpu", ROMREGION_ERASE00)
-
 	ROM_REGION16_LE(0100000, "subcpu", ROMREGION_ERASE00)
 	ROM_DEFAULT_BIOS("208")
 	ROM_SYSTEM_BIOS(0, "135", "mask 135 (198x)")

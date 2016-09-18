@@ -105,3 +105,28 @@ void uknc_ide_device::device_start()
 void uknc_ide_device::device_reset()
 {
 }
+
+void uknc_ide_device::ce0_ce3_w(int data)
+{
+	switch (data)
+	{
+		case 2:
+		case 4:
+		case 6:
+			if (m_slot < 0) {
+//				m_qbus->install_device(0100000, 0117777, *this, &uknc_ide_device::map);
+				m_qbus->install_device(0100000, 0117777, 
+					read16_delegate(FUNC(address_map_bank_device::read16),subdevice<address_map_bank_device>("bankdev")), 
+					write16_delegate(FUNC(address_map_bank_device::write16),subdevice<address_map_bank_device>("bankdev")));
+			}
+			m_slot = (data >> 1) & 3;
+			m_bankdev->set_bank(m_slot);
+			break;
+
+		default:
+			m_slot = -1;
+			break;
+	}
+
+	DBG_LOG(1,"UKNC_IDE CEx", ("<- %x (slot %d)\n", data, m_slot));
+}

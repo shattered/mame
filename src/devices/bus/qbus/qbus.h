@@ -71,7 +71,7 @@ BPOK
 'CE0'
 'CE1'
 'CE2'
-'CE3' || '/CE3'
+'CE3' (slot 2) || '/CE3' (slot 1)
 '4000kHz'
 'A16'
 
@@ -178,12 +178,16 @@ public:
 		m_prgspace->install_device(addrstart, addrend, device, map, bits, unitmask);
 	}
 
+	void unmap_rom(offs_t start, offs_t end);
+
 	DECLARE_WRITE_LINE_MEMBER( birq4_w );
 	DECLARE_WRITE_LINE_MEMBER( birq5_w );
 	DECLARE_WRITE_LINE_MEMBER( birq6_w );
 	DECLARE_WRITE_LINE_MEMBER( birq7_w );
 
 	DECLARE_WRITE_LINE_MEMBER( bdmr_w );
+
+	void ce0_ce3_w(int data);
 
 	const address_space_config m_program_config;
 
@@ -243,6 +247,8 @@ public:
 	// inline configuration
 	static void static_set_qbus(device_t &device, device_t *qbus_device);
 
+	virtual void ce0_ce3_w(int data) { m_ce0_ce3 = data; }
+
 	qbus_device  *m_qbus;
 	device_t     *m_qbus_dev;
 	device_qbus_card_interface *m_next;
@@ -253,6 +259,8 @@ protected:
 	virtual int z80daisy_irq_state() { return 0; }
 	virtual int z80daisy_irq_ack() { return -1; }
 	virtual void z80daisy_irq_reti() { }
+
+	int	m_ce0_ce3;
 
 	qbus_slot_device *m_slot;
 };

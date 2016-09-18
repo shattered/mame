@@ -13,14 +13,19 @@
 
 #include "emu.h"
 
-// storage
+// generic storage
 #include "pc11.h"
 #include "rt11_vhd.h"
 
-// video
+// dvk video
 #include "dvk_kgd.h"
+
+// uknc cartridges
+#include "uknc_rom.h"
 
 // supported devices
 SLOT_INTERFACE_EXTERN( mpi_cards );
+SLOT_INTERFACE_EXTERN( uknc_cards );
+SLOT_INTERFACE_EXTERN( uknc_carts );
 
 #endif // __MPI_CARDS_H__
