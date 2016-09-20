@@ -22,6 +22,7 @@
 
 // uknc cartridges
 #include "uknc_rom.h"
+#include "uknc_ide.h"
 
 // supported devices
 SLOT_INTERFACE_EXTERN( mpi_cards );

@@ -1119,6 +1119,8 @@ if (BUSES["QBUS"]~=null) then
 		MAME_DIR .. "src/devices/bus/qbus/dvk_kgd.h",
 		MAME_DIR .. "src/devices/bus/qbus/uknc_rom.cpp",
 		MAME_DIR .. "src/devices/bus/qbus/uknc_rom.h",
+		MAME_DIR .. "src/devices/bus/qbus/uknc_ide.cpp",
+		MAME_DIR .. "src/devices/bus/qbus/uknc_ide.h",
 	}
 end
 

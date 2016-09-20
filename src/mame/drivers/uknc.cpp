@@ -55,7 +55,6 @@
 #include "machine/bankdev.h"
 #include "machine/dl11.h"
 #include "machine/i8255.h"
-#include "machine/uknc_ide.h"
 #include "machine/vp1_120.h"
 #include "machine/xm1_031.h"
 #include "sound/speaker.h"
@@ -248,29 +247,12 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( uknc_cart_mem, AS_PROGRAM, 16, uknc_state )
 // map 0
 	AM_RANGE (0000000, 0017777) AM_READ_BANK("plane0bank4") //AM_WRITENOP
-
 // map 1 (default) -- read from system ROM, writes ignored
 	AM_RANGE (0100000, 0117777) AM_ROM AM_REGION("subcpu", 0) //AM_WRITENOP
-
 // map 2
 	AM_RANGE (0200000, 0217777) AM_RAMBANK("plane0bank4")
-
 // map 3
 	AM_RANGE (0300000, 0317777) AM_ROM AM_REGION("subcpu", 0) AM_WRITE_BANK("plane0bank4")
-
-#if 0
-	// ide controller hack
-//	AM_RANGE (0020000, 0027777) AM_ROM AM_WRITENOP AM_REGION("cart1", 0)
-//	AM_RANGE (0030000, 0030017) AM_DEVREADWRITE("ide", uknc_ide_device, read, write)
-	AM_RANGE (0020000, 0037777) AM_ROM AM_WRITENOP AM_REGION("cart1", 0)
-	AM_RANGE (0040000, 0057777) AM_ROM AM_WRITENOP AM_REGION("cart1", 020000)
-	AM_RANGE (0060000, 0077777) AM_ROM AM_WRITENOP AM_REGION("cart1", 040000)
-
-	AM_RANGE (0120000, 0137777) AM_ROM AM_WRITENOP AM_REGION("cart2", 0)
-	AM_RANGE (0140000, 0157777) AM_ROM AM_WRITENOP AM_REGION("cart2", 020000)
-	AM_RANGE (0160000, 0167777) AM_ROM AM_WRITENOP AM_REGION("cart2", 040000)
-	AM_RANGE (0170000, 0170017) AM_DEVREADWRITE("ide", uknc_ide_device, read, write)
-#endif
 ADDRESS_MAP_END
 
 /*
@@ -294,8 +276,8 @@ static ADDRESS_MAP_START( uknc_rom_mem, AS_PROGRAM, 16, uknc_state )
 	AM_RANGE (0320000, 0337777) AM_ROM AM_REGION("subcpu", 040000) AM_WRITE_BANK("plane0bank6")
 	AM_RANGE (0340000, 0357777) AM_ROM AM_REGION("subcpu", 060000)
 // map 4:
-	AM_RANGE (0100000, 0137777) AM_ROM AM_REGION("subcpu", 020000)
-	AM_RANGE (0140000, 0157777) AM_ROM AM_REGION("subcpu", 060000) AM_WRITE_BANK("plane0bank7")
+	AM_RANGE (0400000, 0437777) AM_ROM AM_REGION("subcpu", 020000)
+	AM_RANGE (0440000, 0457777) AM_ROM AM_REGION("subcpu", 060000) AM_WRITE_BANK("plane0bank7")
 // map 5:
 	AM_RANGE (0500000, 0517777) AM_ROM AM_REGION("subcpu", 020000) AM_WRITE_BANK("plane0bank5")
 	AM_RANGE (0520000, 0537777) AM_ROM AM_REGION("subcpu", 040000)
@@ -311,7 +293,6 @@ static ADDRESS_MAP_START( uknc_rom_mem, AS_PROGRAM, 16, uknc_state )
 ADDRESS_MAP_END
 
 
-// variants for b/w monitor; inverted Y; and swapped G, B
 static INPUT_PORTS_START( uknc )
 	PORT_START("YRGB")
 	PORT_DIPNAME(0x03, 0x00, "variant")
@@ -319,8 +300,6 @@ static INPUT_PORTS_START( uknc )
 	PORT_DIPSETTING(0x01, "Color, YGRB")
 	PORT_DIPSETTING(0x02, "Color, xRGB")
 	PORT_DIPSETTING(0x03, "Grayscale")
-
-//	PORT_START("LAN")
 INPUT_PORTS_END
 
 
@@ -567,6 +546,7 @@ static const z80_daisy_config uknc_sub_daisy_chain[] =
 	{ "keyboard" },
 //	{ "reset" },
 	{ "subchan" },
+	{ "subqbus" },
 	{ nullptr }
 };
 
@@ -1089,6 +1069,7 @@ static MACHINE_CONFIG_START( uknc, uknc_state )
 	 * devices on the sub cpu
 	 */
 
+	// has extra signals: CE0..CE3 etc.
 	MCFG_DEVICE_ADD("subqbus", QBUS, 0)
 	MCFG_QBUS_CPU(":subcpu")
 	MCFG_QBUS_OUT_BIRQ4_CB(INPUTLINE("subcpu", INPUT_LINE_VIRQ))
@@ -1130,8 +1111,6 @@ static MACHINE_CONFIG_START( uknc, uknc_state )
 	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 #endif
-
-	MCFG_DEVICE_ADD("ide", UKNC_IDE, 0)
 MACHINE_CONFIG_END
 
 /* ROM definition */
@@ -1142,15 +1121,6 @@ ROM_START( uknc )
 	ROMX_LOAD("uknc135.rom", 0, 0100000, NO_DUMP, ROM_BIOS(1))
 	ROM_SYSTEM_BIOS(1, "208", "mask 208 (198x)")
 	ROMX_LOAD("uknc.rom", 0, 0100000, CRC(a1536994) SHA1(b3c7c678c41ffa9b37f654fbf20fef7d19e6407b), ROM_BIOS(2))
-
-	ROM_REGION16_LE(0100000, "cart1", ROMREGION_ERASE00)
-//	ROM_LOAD("ide_hdbootv0400.bin", 0, 060000, CRC(08422713) SHA1(ce76e6a3f6a4341cc1df361ded8dcde216065ee1))
-//	ROM_LOAD("testuk.bin", 0, 060000, CRC(a48994fc) SHA1(269e5b96da4e352a06c5ec4eebb4e269de9ffc2f))
-	ROM_LOAD("hdload.bin", 0, 060000, CRC(fd0abb4b) SHA1(747c3526ac3bf25d12f9e643038094721c0fe0bc))
-//	ROM_LOAD("romctr_basic.bin", 0, 060000, CRC(a08fff6f) SHA1(d200d87f495e2b1f1b853f96b907021ea5d24c95))
-
-	ROM_REGION16_LE(0100000, "cart2", ROMREGION_ERASE00)
-	ROM_LOAD("ide_wdromv0110.bin",  0, 060000, CRC(1b137894) SHA1(a69fa466d9687eea529b5a868df4690e52e81968))
 ROM_END
 
 /* Driver */

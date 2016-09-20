@@ -28,7 +28,7 @@ SLOT_INTERFACE_START( uknc_carts )
 //	SLOT_INTERFACE("ram_ed", UKNC_RAM_ED)	// RAM disk (device ED:)
 //	SLOT_INTERFACE("ram_me", UKNC_RAM_ME)	// RAM disk (device ME: or RE:)
 //	SLOT_INTERFACE("ide_xx", UKNC_IDE_XX)	// IDE disk controller (device xx:)
-//	SLOT_INTERFACE("ide_wd", UKNC_IDE_WD)	// IDE disk controller (device WD:)
+	SLOT_INTERFACE("ide_wd", UKNC_IDE_WD)	// IDE disk controller (device WD:)
 //	SLOT_INTERFACE("joy", UKNC_JOY)		// Joystick adapter
 //	SLOT_INTERFACE("mfm", UKNC_MFM)		// MFM harddisk controller
 SLOT_INTERFACE_END

@@ -216,11 +216,13 @@ void qbus_device::z80daisy_irq_reti()
 
 void qbus_device::ce0_ce3_w(int data)
 {
+	int tmp = data;
 	device_qbus_card_interface *entry = m_device_list.first();
 
 	while (entry)
 	{
-		entry->ce0_ce3_w(data);
+		entry->ce0_ce3_w(tmp);
+		tmp ^= 8;
 		entry = entry->next();
 	}
 }
