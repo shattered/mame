@@ -14,6 +14,7 @@ SLOT_INTERFACE_START( mpi_cards )
 //	SLOT_INTERFACE("rk11", DEC_RK11)	// Interface I15 + I16
 //	SLOT_INTERFACE("mt11", DEC_MT11)	// Interface I17
 	SLOT_INTERFACE("kgd", DVK_KGD)		// Monochrome graphics
+	SLOT_INTERFACE("kzd", DVK_KZD)		// MFM harddisk controller
 SLOT_INTERFACE_END
 
 SLOT_INTERFACE_START( uknc_cards )

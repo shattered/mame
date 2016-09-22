@@ -17,8 +17,9 @@
 #include "pc11.h"
 #include "rt11_vhd.h"
 
-// dvk video
+// dvk cards
 #include "dvk_kgd.h"
+#include "dvk_kzd.h"
 
 // uknc cartridges
 #include "uknc_rom.h"
