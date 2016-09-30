@@ -291,6 +291,7 @@ static void basicdsk_default_geometry(const struct FloppyFormat *format, struct 
 	int sector_length;
 	memset(geometry, 0, sizeof(*geometry));
 
+#if 0
 	auto err = util::option_resolution::get_default(format->param_guidelines, PARAM_HEADS,           &geometry->heads);
 	assert(err == util::option_resolution::error::SUCCESS);
 	err = util::option_resolution::get_default(format->param_guidelines, PARAM_TRACKS,          &geometry->tracks);
@@ -305,6 +306,14 @@ static void basicdsk_default_geometry(const struct FloppyFormat *format, struct 
 	}
 	err = util::option_resolution::get_default(format->param_guidelines, PARAM_SECTOR_LENGTH,   &sector_length);
 	assert(err == util::option_resolution::error::SUCCESS);
+#else
+	geometry->heads = 1;
+	geometry->tracks = 77;
+	geometry->sectors = 26;
+	geometry->first_sector_id = 1;
+	geometry->interleave = 1;
+	sector_length = 128;
+#endif
 	geometry->sector_length = sector_length;
 
 	if (geometry->interleave > 1)
@@ -347,6 +356,8 @@ FLOPPY_IDENTIFY(basicdsk_identify_default)
 	expected_size *= geometry.heads;
 	expected_size *= geometry.tracks;
 	expected_size *= geometry.sectors;
+	printf("%d vs %d (%d %d %d %d)\n", floppy_image_size(floppy), expected_size,
+		geometry.sector_length, geometry.heads, geometry.tracks, geometry.sectors);
 	*vote = (floppy_image_size(floppy) == expected_size) ? 100 : 50;
 	return FLOPPY_ERROR_SUCCESS;
 }

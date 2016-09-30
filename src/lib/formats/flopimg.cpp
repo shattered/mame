@@ -159,7 +159,7 @@ static floperr_t floppy_open_internal(void *fp, const struct io_procs *procs, co
 	}
 	if (best_vote != 100)
 	{
-		printf("Loading image that is not 100%% recognized\n");
+		printf("Loading image that is not 100%% recognized (best_vote %d)\n", best_vote);
 	}
 	err = FLOPPY_ERROR_SUCCESS;
 
