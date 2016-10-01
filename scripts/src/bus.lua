@@ -1113,6 +1113,8 @@ if (BUSES["QBUS"]~=null) then
 		MAME_DIR .. "src/devices/bus/qbus/mpi_cards.h",
 		MAME_DIR .. "src/devices/bus/qbus/pc11.cpp",
 		MAME_DIR .. "src/devices/bus/qbus/pc11.h",
+		MAME_DIR .. "src/devices/bus/qbus/rx11.cpp",
+		MAME_DIR .. "src/devices/bus/qbus/rx11.h",
 		MAME_DIR .. "src/devices/bus/qbus/rt11_vhd.cpp",
 		MAME_DIR .. "src/devices/bus/qbus/rt11_vhd.h",
 		MAME_DIR .. "src/devices/bus/qbus/dvk_kgd.cpp",

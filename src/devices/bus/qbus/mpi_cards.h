@@ -15,6 +15,7 @@
 
 // generic storage
 #include "pc11.h"
+#include "rx11.h"
 #include "rt11_vhd.h"
 
 // dvk cards

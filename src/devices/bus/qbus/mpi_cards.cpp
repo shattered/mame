@@ -11,6 +11,7 @@
 SLOT_INTERFACE_START( mpi_cards )
 	SLOT_INTERFACE("vhd", RT11_VHD)		// Virtual disk
 	SLOT_INTERFACE("pc11", DEC_PC11)	// Interface I8, I9 ??
+	SLOT_INTERFACE("rx11", DEC_RX11)	// Interface I4
 //	SLOT_INTERFACE("rk11", DEC_RK11)	// Interface I15 + I16
 //	SLOT_INTERFACE("mt11", DEC_MT11)	// Interface I17
 	SLOT_INTERFACE("kgd", DVK_KGD)		// Monochrome graphics

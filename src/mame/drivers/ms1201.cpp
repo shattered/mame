@@ -128,7 +128,7 @@ INPUT_PORTS_END
 static ADDRESS_MAP_START( ms1201_banked_map, AS_PROGRAM, 16, ms1201_state )
 // USER mode
 	AM_RANGE (0000000, 0157777) AM_RAM
-	AM_RANGE (0177170, 0177173) AM_NOP	// VP1-033 in RX11 floppy controller mode (device DX:)
+//	AM_RANGE (0177170, 0177173) AM_NOP	// VP1-033 in RX11 floppy controller mode (device DX:)
 	AM_RANGE (0177514, 0177517) AM_NOP	// VP1-033 in LP11 parallel port mode (device LP:)
 	AM_RANGE (0177560, 0177567) AM_DEVREADWRITE("dl11", dl11_device, read, write)
 // HALT mode
