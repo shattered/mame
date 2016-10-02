@@ -20,6 +20,7 @@
 
 // dvk cards
 #include "dvk_kgd.h"
+#include "dvk_kngmd.h"
 #include "dvk_kzd.h"
 
 // uknc cartridges
