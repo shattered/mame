@@ -108,8 +108,8 @@ enum BREGS {
 
 /************************************************************************/
 #define CompressFlags() (WORD)(int(CF) | 0x02 | (int(PF) << 2) | (int(AF) << 4) | (int(ZF) << 6) \
-				| (int(SF) << 7) | (m_TF << 8) | (m_IF << 9) \
-				| (m_DF << 10) | (int(OF) << 11) | 0x7000 | (m_MF << 15))
+				| (int(SF) << 7) | (int(m_TF) << 8) | (int(m_IF) << 9) \
+				| (int(m_DF) << 10) | (int(OF) << 11) | 0x7000 | (int(m_MF) << 15))
 
 #define ExpandFlags(f) \
 { \
