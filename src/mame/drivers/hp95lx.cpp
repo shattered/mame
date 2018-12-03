@@ -414,7 +414,7 @@ READ8_MEMBER(hp95lx_state::e300_r)
 
 WRITE8_MEMBER(hp95lx_state::f300_w)
 {
-	address_map_bank_device *mapper;
+	address_map_bank_device *mapper = nullptr;
 	const char *mapname;
 
 	LOG("%s: IO %04x <- %02x\n", machine().describe_context(), 0xf300 + offset, data);
@@ -455,6 +455,8 @@ WRITE8_MEMBER(hp95lx_state::f300_w)
 		mapname = "D0000";
 		break;
 	}
+
+	if (!mapper) return;
 
 	switch (offset)
 	{
