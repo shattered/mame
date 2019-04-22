@@ -4724,6 +4724,7 @@ files {
 	MAME_DIR .. "src/mame/drivers/jungleyo.cpp",
 	MAME_DIR .. "src/mame/drivers/kas89.cpp",
 	MAME_DIR .. "src/mame/drivers/kingpin.cpp",
+	MAME_DIR .. "src/mame/drivers/krokha.cpp",
 	MAME_DIR .. "src/mame/drivers/kurukuru.cpp",
 	MAME_DIR .. "src/mame/drivers/kyugo.cpp",
 	MAME_DIR .. "src/mame/includes/kyugo.h",
