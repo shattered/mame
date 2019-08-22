@@ -170,7 +170,7 @@ Notes:
          1Kb - 1Kb RAM at U27 for printer buffer (DIP28, type unknown, very old, with only DATA0,1,2,3, C/D and DIN,DOUT)
          ROM - 16Kb (32Kx4) Some kind of very early DIP28 PROM/ROM? Same pinout as 1Kb RAM above. Holds the character font table for the printer
                Four versions of this ROM exist, one each for Japan/Arabic/Hebrew and one for all other regions
-    NS58167A - National Semiconductor NS58167A Clock Controller RTC at U44. Clock input 32.768kHz (DIP24)
+    NS58167A - National Semiconductor NS58167A Clock Controller RTC at U44. Clock input 32.768kHz (DIP24) [or a 82167 XXX]
        LM358 - National Semiconductor LM358 Operational Amplifier at U40 (DIP8)
        LM393 - Texas Instruments LM393 Dual Comparator at U34 (DIP8)
          BT1 - 3v lithium battery
