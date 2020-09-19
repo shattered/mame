@@ -49,7 +49,7 @@ public:
 		m_softlatch(*this, "softlatch")
 	{ }
 
-	static constexpr feature_type imperfect_features() { return feature::PALETTE | feature::CONTROLS; }
+	static constexpr feature_type imperfect_features() { return feature::PALETTE; }
 
 	required_device<cpu_device> m_maincpu;
 	required_device<screen_device> m_screen;

@@ -9,8 +9,6 @@
     Notes:
     - keyboard connected to sio channel a
     - sio channel a clock output connected to ctc trigger 0
-    - memory map not 100% clear
-    - rt1715w: SCP3 boot loops while executing PROFILE.SUB
 
     Docs:
     - http://www.robotrontechnik.de/html/computer/pc1715w.htm
@@ -747,7 +745,7 @@ void rt1715_state::rt1715(machine_config &config)
 	/* video hardware */
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	m_screen->set_screen_update("i8275", FUNC(i8275_device::screen_update));
-	m_screen->set_raw(13.824_MHz_XTAL, 864, 0, 624, 320, 0, 300); // ?
+	m_screen->set_raw(13.824_MHz_XTAL, 864, 0, 640, 320, 0, 288); // ?
 
 	GFXDECODE(config, "gfxdecode", "palette", gfx_rt1715);
 	PALETTE(config, "palette", FUNC(rt1715_state::rt1715_palette), 3);

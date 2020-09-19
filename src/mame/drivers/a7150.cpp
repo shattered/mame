@@ -133,7 +133,7 @@ uint32_t a7150_state::screen_update_k7072(screen_device &screen, bitmap_ind16 &b
 			uint8_t code = m_video_ram[addr++];
 			for (b = 0; b < 8; b++)
 			{
-				bitmap.pix16(y, horpos++) = ((code >> (7 - b)) & 0x01) ? 1 : 0;
+				bitmap.pix16(y, horpos++) = (code >> (7 - b)) & 1;
 			}
 		}
 	}

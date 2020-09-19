@@ -1765,7 +1765,6 @@ files {
 	MAME_DIR .. "src/mame/machine/cuda.cpp",
 	MAME_DIR .. "src/mame/machine/cuda.h",
 	MAME_DIR .. "src/mame/drivers/iphone2g.cpp",
-	MAME_DIR .. "src/mame/drivers/superga2.cpp",
 }
 
 createMESSProjects(_target, _subtarget, "applied")
